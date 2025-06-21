@@ -64,7 +64,18 @@ When you run `dbshift`, you enter interactive mode where you can use these comma
 | `/help` | Show text-based help menu | `/help` |
 | `q` | Quit interactive mode | `q` |
 
-💡 **Tip**: Simply type `/` to see all available commands with descriptions. The auto-completion feature makes it easy to discover and execute commands!
+💡 **Key Features**:
+- **Persistent Session**: Commands execute and return to the prompt - no need to restart!
+- **Auto-completion**: Type `/` to see all available commands with descriptions
+- **Error Recovery**: Failed commands show helpful errors and keep you in the session
+- **Easy Discovery**: Perfect for newcomers who don't need to memorize commands
+
+✨ **How to Use Interactive Mode**:
+1. Run `dbshift` to start interactive mode
+2. Type `/` to see the command menu
+3. Use arrow keys to navigate and press Enter to select
+4. Commands execute and return to prompt for the next action
+5. Type `q` only when you want to exit
 
 ### CLI Mode Commands
 
@@ -163,10 +174,11 @@ dbshift
 
 # Use the auto-completion feature:
 /                         # Show all available commands
-/config                   # Enter configuration menu
+/config                   # Enter configuration menu  
 /config show              # Show current configuration  
 /config init              # Interactive setup
 /ping                     # Test connection
+# Commands execute and return to prompt automatically!
 ```
 
 #### CLI Mode (Great for automation)
@@ -195,9 +207,10 @@ dbshiftcli ping --host=testhost --user=testuser     # Quick connection test
 #### For New Users (Interactive Mode)
 1. **Start Interactive Mode**: Run `dbshift`
 2. **Discover Commands**: Type `/` to see all available options
-3. **Setup Configuration**: Use `/config init` for guided setup
+3. **Setup Configuration**: Use `/config init` for guided setup  
 4. **Test Connection**: Use `/ping` to verify connectivity
 5. **Start Using**: Use `/init`, `/create`, `/migrate` commands
+6. **Continuous Workflow**: Commands complete and return to prompt automatically
 
 #### For Advanced Users (CLI Mode)
 1. **First Time Setup**: Use `dbshiftcli config-init` for interactive configuration

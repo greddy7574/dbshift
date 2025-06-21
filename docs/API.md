@@ -455,6 +455,77 @@ try {
 }
 ```
 
+### Interactive Mode Persistence (v0.3.0 Fix)
+
+#### Problem Resolution
+
+**Issue**: Commands would terminate the interactive session after execution.
+
+**Root Cause**: Command modules called `process.exit(1)` on errors, terminating the entire Node.js process.
+
+**Solution**: Environment-aware error handling system.
+
+#### Implementation
+
+**Environment Detection**:
+```javascript
+// Set when interactive mode starts
+process.env.DBSHIFT_INTERACTIVE_MODE = 'true';
+```
+
+**Command Module Adaptation**:
+```javascript
+// Before: Always exit on error
+catch (error) {
+  console.error('Command failed:', error.message);
+  process.exit(1); // Terminates interactive mode
+}
+
+// After: Conditional error handling
+catch (error) {
+  console.error('Command failed:', error.message);
+  if (!process.env.DBSHIFT_INTERACTIVE_MODE) {
+    process.exit(1); // CLI mode: exit process
+  } else {
+    throw error;     // Interactive mode: throw for upper handling
+  }
+}
+```
+
+**Interactive Mode Error Capture**:
+```javascript
+async routeCommand(command, args) {
+  switch (command) {
+    case '/init':
+      try {
+        await initCommand();
+        console.log(chalk.green('✅ Project initialized successfully!'));
+      } catch (error) {
+        console.error(chalk.red('❌ Failed to initialize project:'), error.message);
+      }
+      break; // Session continues regardless of success/failure
+      
+    case '/create':
+      try {
+        const migrationName = args[0];
+        const author = this.parseAuthorFromArgs(args);
+        await createCommand(migrationName, { author });
+        console.log(chalk.green('✅ Migration file created successfully!'));
+      } catch (error) {
+        console.error(chalk.red('❌ Failed to create migration:'), error.message);
+      }
+      break; // Session persists
+  }
+}
+```
+
+#### Benefits
+
+- **Session Persistence**: Commands complete and return to prompt
+- **Error Recovery**: Failed commands display errors but keep session alive
+- **Backward Compatibility**: CLI mode behavior unchanged
+- **User Experience**: Continuous workflow without restarts
+
 ## Configuration Management
 
 DBShift v0.2.0+ includes enhanced configuration management commands:

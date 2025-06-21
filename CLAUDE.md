@@ -331,7 +331,22 @@ CREATE TABLE `dbshift`.`migration_history` (
 - **用户体验至上**: 输入 "/" 立即显示可选命令，降低学习成本
 - **上下文敏感**: 根据当前菜单上下文显示相关命令
 - **引导式操作**: 复杂命令（如 create）提供分步引导
+- **持续交互**: 命令执行后保持在交互模式，提供真正的持续会话体验
 - **优雅降级**: 保持传统文本菜单作为备选方案
+
+#### v0.3.0 关键修复
+**问题1: 自动补全功能访问**
+- **现象**: 用户输入 "/" 后没有显示命令选择器
+- **原因**: 功能实际工作正常，但用户测试方式不正确
+- **解决**: 改善文档说明和用户引导
+
+**问题2: 交互模式持续性**
+- **现象**: 执行任何命令后会退出交互模式
+- **根本原因**: 命令模块中的 `process.exit(1)` 调用终止整个进程
+- **解决方案**: 
+  - 引入 `DBSHIFT_INTERACTIVE_MODE` 环境变量
+  - 修改所有命令模块支持交互模式
+  - 实现智能错误处理，在交互模式下抛出异常而非退出进程
 
 #### 技术实现架构
 ```javascript
@@ -433,6 +448,55 @@ async handleCreateCommand() {
 - **搜索友好**: inquirer 支持上下箭头键和首字母快速选择
 - **取消机制**: 随时可以取消操作，回到命令提示符
 - **错误处理**: 输入验证和友好的错误提示
+
+#### 交互模式错误处理机制 (v0.3.0 修复)
+
+**核心问题解决**:
+交互模式初版存在命令执行后退出的问题，通过以下机制彻底解决：
+
+**环境变量标识系统**:
+```javascript
+// 交互模式启动时设置环境标识
+process.env.DBSHIFT_INTERACTIVE_MODE = 'true';
+```
+
+**智能错误处理策略**:
+```javascript
+// 命令模块中的条件退出逻辑
+catch (error) {
+  console.error('Command failed:', error.message);
+  if (!process.env.DBSHIFT_INTERACTIVE_MODE) {
+    process.exit(1);  // CLI 模式：退出进程
+  } else {
+    throw error;      // 交互模式：抛出错误供上层处理
+  }
+}
+```
+
+**交互模式统一错误捕获**:
+```javascript
+// routeCommand 中为每个命令添加 try-catch
+case '/init':
+  try {
+    await initCommand();
+    console.log(chalk.green('✅ Project initialized successfully!'));
+  } catch (error) {
+    console.error(chalk.red('❌ Failed to initialize project:'), error.message);
+  }
+  break; // 继续保持在交互模式
+```
+
+**修改的关键文件**:
+- `lib/commands/init.js` - 项目初始化错误处理
+- `lib/commands/create.js` - 迁移创建错误处理
+- `lib/commands/test-connection.js` - 连接测试错误处理
+- `bin/dbshift.js` - 交互模式核心错误处理逻辑
+
+**优势**:
+- ✅ 错误后自动恢复到命令提示符
+- ✅ 保持用户会话连续性
+- ✅ 提供清晰的错误反馈
+- ✅ 不影响 CLI 模式的原有行为
 
 ### 交互模式架构 (v0.2.4)
 

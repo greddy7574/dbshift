@@ -20,11 +20,85 @@ class DBShiftInteractive {
     this.rl = readline.createInterface({
       input: process.stdin,
       output: process.stdout,
-      prompt: chalk.blue('dbshift> ')
+      prompt: chalk.blue('dbshift> '),
+      completer: this.completer.bind(this)
     });
     
     this.currentContext = 'main';
+    this.commands = this.getAvailableCommands();
     this.setupReadline();
+  }
+
+  getAvailableCommands() {
+    return {
+      main: [
+        { command: '/init', description: 'Initialize new project' },
+        { command: '/migrate', description: 'Run pending migrations' },
+        { command: '/status', description: 'Show migration status' },
+        { command: '/create', description: 'Create new migration' },
+        { command: '/config', description: 'Configuration management' },
+        { command: '/ping', description: 'Test database connection' },
+        { command: '/help', description: 'Show help menu' },
+        { command: '/clear', description: 'Clear screen' },
+        { command: 'q', description: 'Quit interactive mode' }
+      ],
+      config: [
+        { command: '/config show', description: 'Show current configuration' },
+        { command: '/config init', description: 'Interactive configuration setup' },
+        { command: '/config set', description: 'Set configuration values' },
+        { command: '/back', description: 'Back to main menu' }
+      ]
+    };
+  }
+
+  completer(line) {
+    const currentCommands = this.currentContext === 'config' 
+      ? this.commands.config 
+      : this.commands.main;
+    
+    const completions = currentCommands.map(cmd => cmd.command);
+    
+    // 如果用戶輸入以 "/" 開始，提供命令補全
+    if (line.startsWith('/')) {
+      const hits = completions.filter(c => c.startsWith(line));
+      
+      // 如果只有一個匹配，直接返回
+      if (hits.length === 1) {
+        return [hits, line];
+      }
+      
+      // 如果有多個匹配，顯示所有選項
+      if (hits.length > 1) {
+        // 清除當前行並顯示所有可用選項
+        console.log('\n');
+        console.log(chalk.blue('📋 Available Commands:'));
+        console.log('─'.repeat(50));
+        
+        hits.forEach(hit => {
+          const cmdInfo = currentCommands.find(c => c.command === hit);
+          if (cmdInfo) {
+            console.log(chalk.green(`  ${hit.padEnd(15)}`), chalk.gray(cmdInfo.description));
+          }
+        });
+        console.log('─'.repeat(50));
+        console.log(chalk.yellow('💡 Press Tab again to cycle through options'));
+        console.log();
+        
+        return [hits, line];
+      }
+      
+      return [hits, line];
+    }
+    
+    // 如果沒有輸入 "/"，提示使用斜槓命令
+    if (line === '') {
+      console.log('\n');
+      console.log(chalk.blue('💡 Type "/" to see available commands, or press Tab for auto-completion'));
+      console.log();
+      return [[], line];
+    }
+    
+    return [[], line];
   }
 
   setupReadline() {

@@ -150,8 +150,9 @@ class DBShiftInteractive {
     // 更新當前輸入狀態
     this.currentInput = input;
     
-    // 當輸入以 "/" 開始時顯示即時命令過濾
-    if (input.startsWith('/')) {
+    // 只有當輸入以 "/" 開始且長度大於1時才顯示即時命令過濾
+    // 這避免了輸入單個字母 "i" 時的混淆
+    if (input.startsWith('/') && input.length > 1) {
       this.showLiveCommands(input);
     } else if (this.isShowingLiveCommands) {
       this.hideLiveCommands();
@@ -416,10 +417,15 @@ class DBShiftInteractive {
       case '/init':
         console.log(chalk.blue('🚀 Initializing new project...'));
         try {
+          // 暂停当前 readline 接口，让 init 命令的 inquirer 接管
+          this.rl.pause();
           await initCommand();
           console.log(chalk.green('✅ Project initialized successfully!'));
         } catch (error) {
           console.error(chalk.red('❌ Failed to initialize project:'), error.message);
+        } finally {
+          // 恢复 readline 接口
+          this.rl.resume();
         }
         break;
 
@@ -450,6 +456,8 @@ class DBShiftInteractive {
           break;
         }
         try {
+          // 暂停当前 readline 接口
+          this.rl.pause();
           const migrationName = args[0];
           const author = this.parseAuthorFromArgs(args);
           console.log(chalk.blue(`📝 Creating migration: ${migrationName}`));
@@ -457,6 +465,9 @@ class DBShiftInteractive {
           console.log(chalk.green('✅ Migration file created successfully!'));
         } catch (error) {
           console.error(chalk.red('❌ Failed to create migration:'), error.message);
+        } finally {
+          // 恢复 readline 接口
+          this.rl.resume();
         }
         break;
 
@@ -511,11 +522,16 @@ class DBShiftInteractive {
 
       case 'init':
         try {
+          // 暂停当前 readline 接口
+          this.rl.pause();
           const initEnv = this.parseEnvFromArgs(restArgs);
           await configInitCommand({ env: initEnv });
           console.log(chalk.green('✅ Configuration initialized successfully!'));
         } catch (error) {
           console.error(chalk.red('❌ Failed to initialize configuration:'), error.message);
+        } finally {
+          // 恢复 readline 接口
+          this.rl.resume();
         }
         break;
 

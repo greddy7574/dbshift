@@ -147,6 +147,78 @@ FileUtils.listFiles('/path/to/dir', '.sql');
 - `readFile(filePath)` - Read file content
 - `writeFile(filePath, content)` - Write file content
 - `ensureDir(dirPath)` - Create directory if not exists
+
+### ConnectionTester (v0.2.3+)
+
+Database connection testing utility for the `ping` command and configuration validation.
+
+```javascript
+const ConnectionTester = require('./lib/utils/connectionTester');
+
+// Test database connection
+const result = await ConnectionTester.testConnection(dbConfig, {
+  verbose: true,              // Show detailed output
+  testMigrationTable: true    // Test migration table access
+});
+
+// Test migration table access only
+const migrationResult = await ConnectionTester.testMigrationTableAccess(dbConfig);
+
+// Show troubleshooting suggestions for errors
+ConnectionTester.showTroubleshootingSuggestions(error);
+```
+
+#### Methods
+
+- `testConnection(dbConfig, options)` - Test database connection with detailed diagnostics
+  - **Parameters:**
+    - `dbConfig` - Database configuration object
+    - `options.verbose` - Show detailed console output (default: true)
+    - `options.testMigrationTable` - Test migration table access (default: false)
+  - **Returns:** Promise resolving to connection result object
+  
+- `testMigrationTableAccess(dbConfig, verbose)` - Test migration table access
+  - **Parameters:**
+    - `dbConfig` - Database configuration object
+    - `verbose` - Show console output (default: true)
+  - **Returns:** Promise resolving to migration table status
+  
+- `showTroubleshootingSuggestions(error)` - Display error-specific troubleshooting tips
+  - **Parameters:**
+    - `error` - Error object with error code
+
+#### Connection Result Object
+
+```javascript
+{
+  success: true,
+  mysql_version: "8.0.28",
+  server_comment: "MySQL Community Server",
+  timing: {
+    connect: 45,    // Connection time in ms
+    query: 12,      // Query time in ms
+    total: 67       // Total time in ms
+  },
+  migration: {      // Only if testMigrationTable: true
+    table_exists: true,
+    total_migrations: 10,
+    completed_migrations: 8,
+    pending_migrations: 2
+  }
+}
+```
+
+#### Error Handling
+
+ConnectionTester provides specific troubleshooting suggestions for common database errors:
+
+- `ECONNREFUSED` - Server connection issues
+- `ER_ACCESS_DENIED_ERROR` - Authentication problems
+- `ENOTFOUND` - DNS/hostname resolution
+- `ER_BAD_DB_ERROR` - Database does not exist
+
+#### Additional FileUtils Methods
+
 - `listFiles(dirPath, extension)` - List files in directory
 - `generateTimestamp()` - Generate YYYYMMDD timestamp
 - `generateSequence(dirPath, dateStr, author)` - Generate author-based sequence number (v0.2.1+)

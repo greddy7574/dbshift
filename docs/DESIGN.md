@@ -117,7 +117,62 @@ dbshift config-set      # 命令行直接设置
 3. `.env` 文件中的环境变量
 4. 默认值 (development)
 
-### 4. 错误处理和重试机制
+### 4. 连接测试架构 (v0.2.3+)
+
+#### 设计背景
+原先的连接测试功能分散在 `config-init` 和 `config-set` 命令中，存在代码重复和功能不完整的问题。
+
+#### 设计目标
+- **命令独立**: 提供专门的连接测试命令
+- **代码重用**: 统一的连接测试逻辑
+- **功能完整**: 支持详细诊断和故障排除
+
+#### 命令设计选择
+
+**为什么选择 `ping` 而不是 `test`？**
+```bash
+# 如果使用 test 作为主命令，将来会有冲突：
+dbshift test connection
+dbshift test sql-syntax
+dbshift test migration-integrity
+
+# 使用 ping 语义更清晰，专门用于连接测试：
+dbshift ping                    # 简洁、明确
+dbshift validate-sql           # 其他测试功能用更具体的命令
+dbshift check-migration
+```
+
+#### 架构设计
+```javascript
+// 重构前：分散的连接测试代码
+// config/init.js 中有连接测试
+// config/set.js 中有连接测试
+// → 代码重复，难以维护
+
+// 重构后：统一的连接测试架构
+ConnectionTester.testConnection(dbConfig, options)
+├── 基本连接测试
+├── MySQL版本检测  
+├── 性能计时统计
+├── 迁移表访问测试 (可选)
+└── 错误分类和建议
+```
+
+#### 双重测试模式
+1. **配置文件测试**: `dbshift ping -e production`
+2. **临时参数测试**: `dbshift ping --host=localhost --user=root`
+
+#### 错误分类处理
+```javascript
+const errorTypes = {
+  'ECONNREFUSED': '检查MySQL服务是否启动',
+  'ER_ACCESS_DENIED_ERROR': '检查用户名密码',
+  'ENOTFOUND': '检查主机名DNS解析',
+  'ER_BAD_DB_ERROR': '检查数据库是否存在'
+};
+```
+
+### 5. 错误处理和重试机制
 
 #### 数据库设计
 ```sql

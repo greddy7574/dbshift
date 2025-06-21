@@ -33,6 +33,9 @@ dbshift config-init
 
 # Set configuration directly
 dbshift config-set --host=localhost --user=root --password=123456
+
+# Test database connection
+dbshift ping
 ```
 
 ## 📋 Commands
@@ -83,6 +86,28 @@ Options:
 - `--user <user>` - Database username
 - `--password <password>` - Database password
 
+### `dbshift ping [options]`
+Test database connection quickly and efficiently.
+
+Options:
+- `-e, --env <environment>` - Specify environment (default: development)
+- `--host <host>` - Database host (temporary test, not saved)
+- `--port <port>` - Database port (temporary test, not saved)
+- `--user <user>` - Database username (temporary test, not saved)
+- `--password <password>` - Database password (temporary test, not saved)
+
+Examples:
+```bash
+# Test current configuration
+dbshift ping
+
+# Test production environment
+dbshift ping -e production
+
+# Test custom connection (without saving)
+dbshift ping --host=localhost --user=root --password=123456
+```
+
 ## 📁 Project Structure
 
 ```
@@ -114,14 +139,20 @@ dbshift config-init -e production                 # Setup production environment
 dbshift config-set --host=localhost --user=root --password=123456
 dbshift config-set --host=prod-server --user=prod-user -e production
 dbshift config-set --port=3307                    # Update single value
+
+# Test database connection
+dbshift ping                                      # Test current configuration
+dbshift ping -e production                       # Test production environment
+dbshift ping --host=testhost --user=testuser     # Quick connection test
 ```
 
 ### Configuration Workflow
 
 1. **First Time Setup**: Use `dbshift config-init` for interactive configuration
-2. **View Current Settings**: Use `dbshift config` to see current configuration
-3. **Quick Updates**: Use `dbshift config-set` to change specific values
-4. **Multiple Environments**: Use `-e` flag to manage different environments
+2. **Test Connection**: Use `dbshift ping` to verify database connectivity
+3. **View Current Settings**: Use `dbshift config` to see current configuration
+4. **Quick Updates**: Use `dbshift config-set` to change specific values
+5. **Multiple Environments**: Use `-e` flag to manage different environments
 
 ## ⚙️ Configuration
 

@@ -12,6 +12,7 @@ const createCommand = require('../lib/commands/create');
 const showConfigCommand = require('../lib/commands/config/index');
 const configInitCommand = require('../lib/commands/config/init');
 const configSetCommand = require('../lib/commands/config/set');
+const testConnectionCommand = require('../lib/commands/test-connection');
 
 // 设置程序信息
 program
@@ -23,12 +24,15 @@ Configuration commands:
   config                 Show current configuration
   config-init            Interactive configuration setup  
   config-set             Set specific configuration values
+  ping                   Test database connection
 
 Configuration examples:
   dbshift config                                    # Show current config
   dbshift config-init                               # Interactive setup
   dbshift config-set --host=localhost --user=root  # Set values directly
   dbshift config-set --host=prod-host -e production # Set production config
+  dbshift ping                                      # Test current config
+  dbshift ping --host=localhost --user=root        # Test custom params
 
 Configuration formats:
   .env file              Simple key=value format, good for production
@@ -104,6 +108,18 @@ program
   .option('--password <password>', 'database password')
   .addHelpText('after', '\nExamples:\n  dbshift config-set --host=localhost --user=root --password=123456\n  dbshift config-set --host=prod-host -e production')
   .action(configSetCommand);
+
+// ping 命令 (测试数据库连接)
+program
+  .command('ping')
+  .description('Test database connection')
+  .option('-e, --env <environment>', 'specify environment (default: development)', 'development')
+  .option('--host <host>', 'database host (temporary test, not saved)')
+  .option('--port <port>', 'database port (temporary test, not saved)')
+  .option('--user <user>', 'database username (temporary test, not saved)')
+  .option('--password <password>', 'database password (temporary test, not saved)')
+  .addHelpText('after', '\nExamples:\n  dbshift ping                                     # Test current config\n  dbshift ping -e production                       # Test production config\n  dbshift ping --host=localhost --user=root       # Test custom parameters')
+  .action(testConnectionCommand);
 
 // 错误处理
 program.on('command:*', () => {

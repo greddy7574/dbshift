@@ -7,6 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 DBShift 是一个现代化的 MySQL 数据库迁移工具，灵感来自 Flyway。它提供了简单易用的 CLI 界面，用于数据库版本控制和自动化迁移。项目采用 Node.js + MySQL2 技术栈，设计为全局 npm 包。
 
 ### 版本历史
+- **v0.2.3**: 添加 ping 命令用于数据库连接测试，重构连接测试逻辑
 - **v0.2.1+**: 引入作者分组序号机制，解决多人协作冲突
 - **v0.2.0**: 添加配置管理命令（config, config-init, config-set）
 - **v0.1.x**: 基础迁移功能和CLI架构
@@ -14,6 +15,7 @@ DBShift 是一个现代化的 MySQL 数据库迁移工具，灵感来自 Flyway�
 ### 核心特性
 - 🔢 **作者分组序号**: 每个开发者独立的序号系统，避免团队协作冲突
 - ⚙️ **灵活配置管理**: 支持 .env 和 schema.config.js 两种配置方式
+- 🏓 **连接测试**: ping 命令快速测试数据库连接，支持临时参数和多环境
 - 🔄 **失败重试机制**: 基于唯一约束的安全重试系统
 - 🌍 **多环境支持**: development, staging, production 环境隔离
 - 📝 **标准SQL兼容**: 支持任意SQL编辑器执行的标准语法
@@ -28,6 +30,7 @@ DBShift 是一个现代化的 MySQL 数据库迁移工具，灵感来自 Flyway�
   - `migrate.js`: 执行待处理的迁移文件
   - `status.js`: 查看迁移状态和历史
   - `create.js`: 创建新的迁移文件（支持作者分组序号）
+  - `test-connection.js`: ping 命令实现，支持连接测试
   - `config/`: 配置管理命令组
     - `index.js`: 显示当前配置
     - `init.js`: 交互式配置向导
@@ -38,6 +41,7 @@ DBShift 是一个现代化的 MySQL 数据库迁移工具，灵感来自 Flyway�
   - `migration.js`: 迁移文件管理和执行逻辑
 - `lib/utils/`: 工具类
   - `fileUtils.js`: 文件操作和序号生成（包含作者分组逻辑）
+  - `connectionTester.js`: 数据库连接测试工具类（v0.2.3+）
   - `logger.js`: 彩色日志输出
   - `validator.js`: 输入验证
 - `package.json`: NPM 包配置，bin 字段指向 `dbshift` 全局命令
@@ -168,6 +172,10 @@ node bin/dbshift.js status
 node bin/dbshift.js config
 node bin/dbshift.js config-init
 node bin/dbshift.js config-set --host=testhost --user=testuser
+
+# 连接测试 (v0.2.3+)
+node bin/dbshift.js ping
+node bin/dbshift.js ping --host=localhost --user=root
 ```
 
 ### 用户使用命令
@@ -183,6 +191,11 @@ dbshift status
 dbshift config                    # 显示当前配置
 dbshift config-init               # 交互式配置设置
 dbshift config-set --host=localhost --user=root --password=123456
+
+# 连接测试命令 (v0.2.3+)
+dbshift ping                      # 测试当前配置连接
+dbshift ping -e production        # 测试生产环境连接
+dbshift ping --host=localhost --user=root --password=123456  # 临时测试连接
 ```
 
 ## 核心模块说明
@@ -296,6 +309,37 @@ CREATE TABLE `dbshift`.`migration_history` (
 - **发布文档**: 自动生成详细的 release notes
 
 ## 最新开发指导 (v0.2.1+)
+
+### 连接测试重构 (v0.2.3)
+
+#### ping 命令设计理念
+- **命令简洁**: 使用 `ping` 替代 `test-connection`，避免与未来其他测试功能冲突
+- **功能独立**: 专门用于数据库连接测试，语义明确
+- **参数灵活**: 支持配置文件和临时参数两种测试方式
+
+#### ConnectionTester 工具类 (`lib/utils/connectionTester.js`)
+```javascript
+// 核心功能
+- testConnection(dbConfig, options)    // 主要连接测试方法
+- testMigrationTableAccess(dbConfig)   // 迁移表访问测试
+- showTroubleshootingSuggestions(error) // 故障排除建议
+
+// 使用示例
+const result = await ConnectionTester.testConnection(dbConfig, {
+  verbose: true,              // 显示详细信息
+  testMigrationTable: true    // 测试迁移表访问
+});
+```
+
+#### 代码重构要点
+1. **DRY原则**: 提取重复的连接测试代码到 ConnectionTester 类
+2. **复用性**: config 命令和 ping 命令共享相同的连接测试逻辑
+3. **扩展性**: ConnectionTester 支持多种测试选项和详细的错误处理
+
+#### 测试覆盖
+- `test/utils/connectionTester.test.js`: 31个测试用例
+- 测试成功连接、连接失败、迁移表访问等场景
+- Mock Database 类确保测试的独立性
 
 ### 作者序号功能开发要点
 1. **核心逻辑**: `FileUtils.generateSequence()` 方法

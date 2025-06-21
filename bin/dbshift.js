@@ -72,15 +72,15 @@ class DBShiftInteractive {
         // 清除當前行並顯示所有可用選項
         console.log('\n');
         console.log(chalk.blue('📋 Available Commands:'));
-        console.log('─'.repeat(50));
+        console.log('─'.repeat(60));
         
         hits.forEach(hit => {
           const cmdInfo = currentCommands.find(c => c.command === hit);
           if (cmdInfo) {
-            console.log(chalk.green(`  ${hit.padEnd(15)}`), chalk.gray(cmdInfo.description));
+            console.log(`${chalk.cyan(hit.padEnd(20))} ${chalk.gray(cmdInfo.description)}`);
           }
         });
-        console.log('─'.repeat(50));
+        console.log('─'.repeat(60));
         console.log(chalk.yellow('💡 Press Tab again to cycle through options'));
         console.log();
         
@@ -93,7 +93,10 @@ class DBShiftInteractive {
     // 如果沒有輸入 "/"，提示使用斜槓命令
     if (line === '') {
       console.log('\n');
-      console.log(chalk.blue('💡 Type "/" to see available commands, or press Tab for auto-completion'));
+      console.log(chalk.blue('💡 Available options:'));
+      console.log(`${chalk.cyan('/')} ${chalk.gray('                   Show command menu')}`);
+      console.log(`${chalk.cyan('/[command] + Tab')} ${chalk.gray('   Auto-complete commands')}`);
+      console.log(`${chalk.cyan('q')} ${chalk.gray('                   Quit interactive mode')}`);
       console.log();
       return [[], line];
     }
@@ -120,23 +123,23 @@ class DBShiftInteractive {
     let choices;
     if (this.currentContext === 'config') {
       choices = [
-        { name: '📋 Show current configuration', value: '/config show' },
-        { name: '⚙️ Interactive configuration setup', value: '/config init' },
-        { name: '🔧 Set configuration values', value: '/config set' },
-        { name: '🔙 Back to main menu', value: '/back' },
-        { name: '❌ Cancel', value: 'cancel' }
+        { name: '/config show         Show current configuration', value: '/config show' },
+        { name: '/config init         Interactive configuration setup', value: '/config init' },
+        { name: '/config set          Set configuration values', value: '/config set' },
+        { name: '/back                Back to main menu', value: '/back' },
+        { name: 'Cancel                Exit menu', value: 'cancel' }
       ];
     } else {
       choices = [
-        { name: '🚀 Initialize new project', value: '/init' },
-        { name: '📦 Run pending migrations', value: '/migrate' },
-        { name: '📊 Show migration status', value: '/status' },
-        { name: '📝 Create new migration', value: '/create', needsInput: true },
-        { name: '⚙️ Configuration management', value: '/config' },
-        { name: '🏓 Test database connection', value: '/ping' },
-        { name: '🧹 Clear screen', value: '/clear' },
-        { name: '❓ Show help', value: '/help' },
-        { name: '❌ Cancel', value: 'cancel' }
+        { name: '/init                Initialize new project', value: '/init' },
+        { name: '/migrate             Run pending migrations', value: '/migrate' },
+        { name: '/status              Show migration status', value: '/status' },
+        { name: '/create              Create new migration', value: '/create', needsInput: true },
+        { name: '/config              Configuration management', value: '/config' },
+        { name: '/ping                Test database connection', value: '/ping' },
+        { name: '/clear               Clear screen', value: '/clear' },
+        { name: '/help                Show help menu', value: '/help' },
+        { name: 'Cancel                Exit menu', value: 'cancel' }
       ];
     }
 

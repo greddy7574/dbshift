@@ -102,6 +102,7 @@ class DBShiftInteractive {
   }
 
   setupReadline() {
+
     this.rl.on('line', async (line) => {
       await this.handleInput(line.trim());
     });
@@ -215,7 +216,7 @@ class DBShiftInteractive {
 ║      Interactive Database Migration   ║
 ╚══════════════════════════════════════╝
 `));
-    console.log(chalk.gray('Type "/" for interactive command menu, "/help" for text menu, or "q" to quit\n'));
+    console.log(chalk.gray('Type "/" + Tab for auto-completion, "/help" for help menu, or "q" to quit\n'));
     this.rl.prompt();
   }
 

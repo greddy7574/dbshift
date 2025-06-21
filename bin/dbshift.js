@@ -1,137 +1,262 @@
 #!/usr/bin/env node
 
-const { program } = require('commander');
+const readline = require('readline');
 const chalk = require('chalk');
-const package = require('../package.json');
+const packageInfo = require('../package.json');
 
-// 导入命令处理器
+// 导入所有命令处理器 (复用原有的命令逻辑)
 const initCommand = require('../lib/commands/init');
 const migrateCommand = require('../lib/commands/migrate');
 const statusCommand = require('../lib/commands/status');
 const createCommand = require('../lib/commands/create');
 const showConfigCommand = require('../lib/commands/config/index');
 const configInitCommand = require('../lib/commands/config/init');
-const configSetCommand = require('../lib/commands/config/set');
+// const configSetCommand = require('../lib/commands/config/set'); // 暂时不用，保留给未来扩展
 const testConnectionCommand = require('../lib/commands/test-connection');
 
-// 设置程序信息
-program
-  .name('dbshift')
-  .description('Database schema migration tool inspired by Flyway')
-  .version(package.version, '-v, --version', 'display version number')
-  .addHelpText('after', `
-Configuration commands:
-  config                 Show current configuration
-  config-init            Interactive configuration setup  
-  config-set             Set specific configuration values
-  ping                   Test database connection
+class DBShiftInteractive {
+  constructor() {
+    this.rl = readline.createInterface({
+      input: process.stdin,
+      output: process.stdout,
+      prompt: chalk.blue('dbshift> ')
+    });
+    
+    this.currentContext = 'main';
+    this.setupReadline();
+  }
 
-Configuration examples:
-  dbshift config                                    # Show current config
-  dbshift config-init                               # Interactive setup
-  dbshift config-set --host=localhost --user=root  # Set values directly
-  dbshift config-set --host=prod-host -e production # Set production config
-  dbshift ping                                      # Test current config
-  dbshift ping --host=localhost --user=root        # Test custom params
+  setupReadline() {
+    this.rl.on('line', async (line) => {
+      await this.handleInput(line.trim());
+    });
 
-Configuration formats:
-  .env file              Simple key=value format, good for production
-  schema.config.js       JavaScript config with multiple environments
+    this.rl.on('close', () => {
+      console.log(chalk.yellow('\nGoodbye! 👋'));
+      process.exit(0);
+    });
+  }
 
-Environment variables (for production):
-  MYSQL_HOST            Database host
-  MYSQL_PORT            Database port (default: 3306)
-  MYSQL_USERNAME        Database username
-  MYSQL_PASSWORD        Database password
+  showWelcome() {
+    console.log(chalk.blue.bold(`
+╔══════════════════════════════════════╗
+║          DBShift v${packageInfo.version}           ║
+║      Interactive Database Migration   ║
+╚══════════════════════════════════════╝
+`));
+    console.log(chalk.gray('Type "/" to see available commands, or "q" to quit\n'));
+    this.rl.prompt();
+  }
 
-Migration file naming:
-  YYYYMMDDNN_Author_description.sql
-  Example: 20241220001_Admin_create_users_table.sql
+  showMainMenu() {
+    console.log(chalk.cyan('\n📋 Available Commands:'));
+    console.log(chalk.gray('──────────────────────'));
+    console.log(chalk.white('/init          ') + chalk.gray('Initialize new project'));
+    console.log(chalk.white('/migrate       ') + chalk.gray('Run pending migrations'));
+    console.log(chalk.white('/status        ') + chalk.gray('Show migration status'));
+    console.log(chalk.white('/create        ') + chalk.gray('Create new migration'));
+    console.log(chalk.white('/config        ') + chalk.gray('Configuration management'));
+    console.log(chalk.white('/ping          ') + chalk.gray('Test database connection'));
+    console.log(chalk.white('/help          ') + chalk.gray('Show detailed help'));
+    console.log(chalk.white('/clear         ') + chalk.gray('Clear screen'));
+    console.log(chalk.white('q              ') + chalk.gray('Quit interactive mode'));
+    console.log();
+    this.rl.prompt();
+  }
 
-For more information, visit: https://github.com/greddy7574/dbshift`);
+  showConfigMenu() {
+    console.log(chalk.cyan('\n⚙️  Configuration Commands:'));
+    console.log(chalk.gray('────────────────────────'));
+    console.log(chalk.white('/config show   ') + chalk.gray('Show current configuration'));
+    console.log(chalk.white('/config init   ') + chalk.gray('Interactive configuration setup'));
+    console.log(chalk.white('/config set    ') + chalk.gray('Set configuration values'));
+    console.log(chalk.white('/back          ') + chalk.gray('Back to main menu'));
+    console.log();
+    this.rl.prompt();
+  }
 
-// init 命令
-program
-  .command('init')
-  .description('Initialize schema migration in current directory')
-  .addHelpText('after', '\nCreates migrations/ directory and configuration files (.env or schema.config.js)')
-  .action(initCommand);
+  async handleInput(input) {
+    try {
+      // 处理退出命令
+      if (input === 'q' || input === 'quit' || input === 'exit') {
+        this.rl.close();
+        return;
+      }
 
-// migrate 命令
-program
-  .command('migrate')
-  .description('Run pending migrations')
-  .option('-e, --env <environment>', 'specify environment (default: development)')
-  .addHelpText('after', '\nExamples:\n  dbshift migrate\n  dbshift migrate -e production\n  dbshift migrate --env staging')
-  .action(migrateCommand);
+      // 处理清屏命令
+      if (input === '/clear' || input === 'clear') {
+        console.clear();
+        this.showWelcome();
+        return;
+      }
 
-// status 命令
-program
-  .command('status')
-  .description('Show migration status (completed/pending)')
-  .option('-e, --env <environment>', 'specify environment (default: development)')
-  .addHelpText('after', '\nShows which migrations have been executed and which are pending')
-  .action(statusCommand);
+      // 处理菜单命令
+      if (input === '/' || input === '/help' || input === 'help') {
+        if (this.currentContext === 'config') {
+          this.showConfigMenu();
+        } else {
+          this.showMainMenu();
+        }
+        return;
+      }
 
-// create 命令
-program
-  .command('create <name>')
-  .description('Create a new migration file with timestamp')
-  .option('-a, --author <author>', 'specify author name (default: Admin)')
-  .addHelpText('after', '\nExamples:\n  dbshift create create_users_table\n  dbshift create add_user_index -a John')
-  .action(createCommand);
+      // 处理返回主菜单
+      if (input === '/back' || input === 'back') {
+        this.currentContext = 'main';
+        console.log(chalk.green('📍 Back to main menu'));
+        this.showMainMenu();
+        return;
+      }
 
-// config 命令 (显示配置)
-program
-  .command('config')
-  .description('Show current database configuration')
-  .option('-e, --env <environment>', 'specify environment (default: development)', 'development')
-  .addHelpText('after', '\nShows current configuration for the specified environment')
-  .action(showConfigCommand);
+      // 处理空输入
+      if (!input) {
+        this.rl.prompt();
+        return;
+      }
 
-// config-init 命令 (交互式配置)
-program
-  .command('config-init')
-  .description('Interactive database configuration setup')
-  .option('-e, --env <environment>', 'specify environment (default: development)', 'development')
-  .addHelpText('after', '\nInteractive setup for database credentials and connection settings')
-  .action(configInitCommand);
+      // 解析命令和参数
+      const parts = input.split(' ');
+      const command = parts[0];
+      const args = parts.slice(1);
 
-// config-set 命令 (设置配置)
-program
-  .command('config-set')
-  .description('Set database configuration values')
-  .option('-e, --env <environment>', 'specify environment (default: development)', 'development')
-  .option('--host <host>', 'database host')
-  .option('--port <port>', 'database port')
-  .option('--user <user>', 'database username')
-  .option('--password <password>', 'database password')
-  .addHelpText('after', '\nExamples:\n  dbshift config-set --host=localhost --user=root --password=123456\n  dbshift config-set --host=prod-host -e production')
-  .action(configSetCommand);
+      // 路由命令处理
+      await this.routeCommand(command, args);
 
-// ping 命令 (测试数据库连接)
-program
-  .command('ping')
-  .description('Test database connection')
-  .option('-e, --env <environment>', 'specify environment (default: development)', 'development')
-  .option('--host <host>', 'database host (temporary test, not saved)')
-  .option('--port <port>', 'database port (temporary test, not saved)')
-  .option('--user <user>', 'database username (temporary test, not saved)')
-  .option('--password <password>', 'database password (temporary test, not saved)')
-  .addHelpText('after', '\nExamples:\n  dbshift ping                                     # Test current config\n  dbshift ping -e production                       # Test production config\n  dbshift ping --host=localhost --user=root       # Test custom parameters')
-  .action(testConnectionCommand);
+    } catch (error) {
+      console.error(chalk.red('❌ Error:'), error.message);
+    }
+    
+    this.rl.prompt();
+  }
 
-// 错误处理
-program.on('command:*', () => {
-  console.error(chalk.red(`Invalid command: ${program.args.join(' ')}`));
-  console.log(chalk.yellow('See --help for a list of available commands.'));
-  process.exit(1);
-});
+  async routeCommand(command, args) {
+    switch (command) {
+      case '/init':
+        console.log(chalk.blue('🚀 Initializing new project...'));
+        await initCommand();
+        console.log(chalk.green('✅ Project initialized successfully!'));
+        break;
 
-// 解析命令行参数
-program.parse();
+      case '/migrate':
+        console.log(chalk.blue('📦 Running migrations...'));
+        const env = this.parseEnvFromArgs(args);
+        await migrateCommand({ env });
+        break;
 
-// 如果没有提供任何命令，显示帮助
-if (!process.argv.slice(2).length) {
-  program.outputHelp();
+      case '/status':
+        console.log(chalk.blue('📊 Checking migration status...'));
+        const statusEnv = this.parseEnvFromArgs(args);
+        await statusCommand({ env: statusEnv });
+        break;
+
+      case '/create':
+        if (args.length === 0) {
+          console.log(chalk.yellow('⚠ Usage: /create <migration_name> [--author=<author>]'));
+          break;
+        }
+        const migrationName = args[0];
+        const author = this.parseAuthorFromArgs(args);
+        console.log(chalk.blue(`📝 Creating migration: ${migrationName}`));
+        await createCommand(migrationName, { author });
+        break;
+
+      case '/config':
+        if (args.length === 0) {
+          this.currentContext = 'config';
+          this.showConfigMenu();
+          break;
+        }
+        await this.handleConfigCommand(args);
+        break;
+
+      case '/ping':
+        console.log(chalk.blue('🏓 Testing database connection...'));
+        const pingOptions = this.parsePingOptions(args);
+        await testConnectionCommand(pingOptions);
+        break;
+
+      default:
+        // 如果在 config 上下文中，尝试处理 config 子命令
+        if (this.currentContext === 'config') {
+          await this.handleConfigCommand([command.replace('/', ''), ...args]);
+        } else {
+          console.log(chalk.yellow(`❓ Unknown command: ${command}`));
+          console.log(chalk.gray('Type "/" to see available commands'));
+        }
+        break;
+    }
+  }
+
+  async handleConfigCommand(args) {
+    const subCommand = args[0];
+    const restArgs = args.slice(1);
+
+    switch (subCommand) {
+      case 'show':
+        const env = this.parseEnvFromArgs(restArgs);
+        await showConfigCommand({ env });
+        break;
+
+      case 'init':
+        const initEnv = this.parseEnvFromArgs(restArgs);
+        await configInitCommand({ env: initEnv });
+        break;
+
+      case 'set':
+        console.log(chalk.yellow('⚠ Config set requires specific parameters. Use dbshiftcli for advanced config-set options.'));
+        console.log(chalk.gray('Example: dbshiftcli config-set --host=localhost --user=root'));
+        break;
+
+      default:
+        console.log(chalk.yellow(`❓ Unknown config command: ${subCommand}`));
+        this.showConfigMenu();
+        break;
+    }
+  }
+
+  parseEnvFromArgs(args) {
+    const envIndex = args.findIndex(arg => arg.startsWith('-e') || arg.startsWith('--env'));
+    if (envIndex !== -1) {
+      if (args[envIndex].includes('=')) {
+        return args[envIndex].split('=')[1];
+      } else if (args[envIndex + 1]) {
+        return args[envIndex + 1];
+      }
+    }
+    return 'development';
+  }
+
+  parseAuthorFromArgs(args) {
+    const authorIndex = args.findIndex(arg => arg.startsWith('--author'));
+    if (authorIndex !== -1) {
+      if (args[authorIndex].includes('=')) {
+        return args[authorIndex].split('=')[1];
+      } else if (args[authorIndex + 1]) {
+        return args[authorIndex + 1];
+      }
+    }
+    return 'Admin';
+  }
+
+  parsePingOptions(args) {
+    const options = { env: 'development' };
+    
+    args.forEach(arg => {
+      if (arg.startsWith('--host=')) options.host = arg.split('=')[1];
+      if (arg.startsWith('--port=')) options.port = arg.split('=')[1];
+      if (arg.startsWith('--user=')) options.user = arg.split('=')[1];
+      if (arg.startsWith('--password=')) options.password = arg.split('=')[1];
+      if (arg.startsWith('-e=') || arg.startsWith('--env=')) options.env = arg.split('=')[1];
+    });
+
+    return options;
+  }
+
+  start() {
+    this.showWelcome();
+  }
 }
+
+// 启动交互模式
+const interactive = new DBShiftInteractive();
+interactive.start();

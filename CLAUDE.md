@@ -7,6 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 DBShift 是一个现代化的 MySQL 数据库迁移工具，灵感来自 Flyway。它提供了简单易用的 CLI 界面，用于数据库版本控制和自动化迁移。项目采用 Node.js + MySQL2 技术栈，设计为全局 npm 包。
 
 ### 版本历史
+- **v0.2.4**: 添加交互模式支持，双模式架构设计（交互模式 + CLI模式）
 - **v0.2.3**: 添加 ping 命令用于数据库连接测试，重构连接测试逻辑
 - **v0.2.1+**: 引入作者分组序号机制，解决多人协作冲突
 - **v0.2.0**: 添加配置管理命令（config, config-init, config-set）
@@ -15,6 +16,7 @@ DBShift 是一个现代化的 MySQL 数据库迁移工具，灵感来自 Flyway�
 ### 核心特性
 - 🔢 **作者分组序号**: 每个开发者独立的序号系统，避免团队协作冲突
 - ⚙️ **灵活配置管理**: 支持 .env 和 schema.config.js 两种配置方式
+- 🖥️ **双模式架构**: 交互模式（dbshift）+ CLI模式（dbshiftcli），满足不同使用场景
 - 🏓 **连接测试**: ping 命令快速测试数据库连接，支持临时参数和多环境
 - 🔄 **失败重试机制**: 基于唯一约束的安全重试系统
 - 🌍 **多环境支持**: development, staging, production 环境隔离
@@ -24,7 +26,8 @@ DBShift 是一个现代化的 MySQL 数据库迁移工具，灵感来自 Flyway�
 ## 核心架构
 
 ### CLI 工具结构
-- `bin/dbshift.js`: CLI 入口文件，处理命令行参数和子命令路由
+- `bin/dbshift.js`: 交互模式入口文件，提供友好的交互界面（v0.2.4+）
+- `bin/dbshiftcli.js`: CLI 模式入口文件，处理命令行参数和子命令路由
 - `lib/commands/`: 各个命令的实现
   - `init.js`: 项目初始化，创建目录和配置文件
   - `migrate.js`: 执行待处理的迁移文件
@@ -162,40 +165,50 @@ module.exports = {
 
 ### 开发时常用命令
 ```bash
+# 测试交互模式 (v0.2.4+)
+node bin/dbshift.js                    # 进入交互模式
+
 # 测试 CLI 功能
-node bin/dbshift.js init
-node bin/dbshift.js create test_migration
-node bin/dbshift.js migrate
-node bin/dbshift.js status
+node bin/dbshiftcli.js init
+node bin/dbshiftcli.js create test_migration
+node bin/dbshiftcli.js migrate
+node bin/dbshiftcli.js status
 
 # 配置管理测试
-node bin/dbshift.js config
-node bin/dbshift.js config-init
-node bin/dbshift.js config-set --host=testhost --user=testuser
+node bin/dbshiftcli.js config
+node bin/dbshiftcli.js config-init
+node bin/dbshiftcli.js config-set --host=testhost --user=testuser
 
 # 连接测试 (v0.2.3+)
-node bin/dbshift.js ping
-node bin/dbshift.js ping --host=localhost --user=root
+node bin/dbshiftcli.js ping
+node bin/dbshiftcli.js ping --host=localhost --user=root
 ```
 
 ### 用户使用命令
 ```bash
 # 全局安装后
 npm install -g dbshift
-dbshift init
-dbshift create create_users_table
-dbshift migrate
-dbshift status
+
+# 交互模式 (v0.2.4+) - 推荐新用户使用
+dbshift                           # 进入交互模式
+# 然后在交互模式中使用:
+# /init, /migrate, /status, /create, /config, /ping
+
+# CLI 模式 - 适合脚本和自动化
+dbshiftcli init
+dbshiftcli create create_users_table
+dbshiftcli migrate
+dbshiftcli status
 
 # 配置管理命令 (v0.2.0+)
-dbshift config                    # 显示当前配置
-dbshift config-init               # 交互式配置设置
-dbshift config-set --host=localhost --user=root --password=123456
+dbshiftcli config                 # 显示当前配置
+dbshiftcli config-init            # 交互式配置设置
+dbshiftcli config-set --host=localhost --user=root --password=123456
 
 # 连接测试命令 (v0.2.3+)
-dbshift ping                      # 测试当前配置连接
-dbshift ping -e production        # 测试生产环境连接
-dbshift ping --host=localhost --user=root --password=123456  # 临时测试连接
+dbshiftcli ping                   # 测试当前配置连接
+dbshiftcli ping -e production     # 测试生产环境连接
+dbshiftcli ping --host=localhost --user=root --password=123456  # 临时测试连接
 ```
 
 ## 核心模块说明
@@ -309,6 +322,54 @@ CREATE TABLE `dbshift`.`migration_history` (
 - **发布文档**: 自动生成详细的 release notes
 
 ## 最新开发指导 (v0.2.1+)
+
+### 交互模式架构 (v0.2.4)
+
+#### 双模式设计理念
+- **用户友好**: 交互模式降低新用户学习成本，类似 Claude Code 的体验
+- **脚本兼容**: CLI 模式保持向后兼容，适合自动化和 CI/CD
+- **代码复用**: 两种模式共享相同的命令逻辑，避免重复实现
+
+#### 交互模式架构 (`bin/dbshift.js`)
+```javascript
+class DBShiftInteractive {
+  // 核心组件
+  - readline接口管理
+  - 上下文状态管理 (main/config)
+  - 命令路由和参数解析
+  - 菜单系统和用户界面
+  
+  // 主要方法
+  showWelcome()           // 显示欢迎界面
+  showMainMenu()          // 显示主菜单
+  showConfigMenu()        // 显示配置子菜单
+  handleInput(input)      // 处理用户输入
+  routeCommand(cmd, args) // 路由命令到对应处理器
+}
+```
+
+#### 命令系统设计
+```javascript
+// 交互模式命令映射
+'/init'     → initCommand()
+'/migrate'  → migrateCommand(options)  
+'/status'   → statusCommand(options)
+'/create'   → createCommand(name, options)
+'/config'   → 进入配置子菜单
+'/ping'     → testConnectionCommand(options)
+
+// 参数解析支持
+parseEnvFromArgs()      // 解析 -e/--env 参数
+parseAuthorFromArgs()   // 解析 --author 参数  
+parsePingOptions()      // 解析连接测试参数
+```
+
+#### 用户体验设计
+- **直观菜单**: `/` 命令显示可用功能
+- **上下文切换**: `/config` 进入子菜单，`/back` 返回
+- **实用功能**: `/clear` 清屏，`q` 退出
+- **错误处理**: 友好的错误提示和恢复
+- **彩色输出**: 使用 chalk 提供视觉反馈
 
 ### 连接测试重构 (v0.2.3)
 

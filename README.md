@@ -2,6 +2,8 @@
 
 A simple and powerful MySQL database migration tool inspired by Flyway.
 
+✨ **New in v0.2.4**: Interactive mode for better user experience!
+
 ## 🚀 Quick Start
 
 ### Installation
@@ -12,71 +14,96 @@ npm install -g dbshift
 
 ### Usage
 
+DBShift offers two modes to suit different use cases:
+
+#### 🎨 Interactive Mode (Recommended for beginners)
+
 ```bash
-# Initialize a new project
-dbshift init
+# Start interactive mode
+dbshift
 
-# Create a new migration
-dbshift create create_users_table
+# Then use commands like:
+# /init          - Initialize new project
+# /create        - Create new migration
+# /migrate       - Run migrations
+# /status        - Check migration status
+# /config        - Configuration management
+# /ping          - Test database connection
+# /              - Show all available commands
+# q              - Quit
+```
 
-# Run migrations
-dbshift migrate
+#### ⚡ CLI Mode (Great for automation and scripts)
 
-# Check migration status
-dbshift status
-
-# Show current configuration
-dbshift config
-
-# Setup configuration interactively
-dbshift config-init
-
-# Set configuration directly
-dbshift config-set --host=localhost --user=root --password=123456
-
-# Test database connection
-dbshift ping
+```bash
+# Direct commands
+dbshiftcli init
+dbshiftcli create create_users_table
+dbshiftcli migrate
+dbshiftcli status
+dbshiftcli config
+dbshiftcli ping
 ```
 
 ## 📋 Commands
 
-### `dbshift init`
+### Interactive Mode Commands
+
+When you run `dbshift`, you enter interactive mode where you can use these commands:
+
+| Command | Description | Example |
+|---------|-------------|---------|
+| `/` | Show available commands | `/` |
+| `/init` | Initialize new project | `/init` |
+| `/migrate` | Run pending migrations | `/migrate -e production` |
+| `/status` | Show migration status | `/status` |
+| `/create` | Create new migration | `/create add_users --author=john` |
+| `/config` | Configuration management | `/config` |
+| `/ping` | Test database connection | `/ping --host=localhost` |
+| `/clear` | Clear screen | `/clear` |
+| `q` | Quit interactive mode | `q` |
+
+### CLI Mode Commands
+
+For automation and scripting, use the `dbshiftcli` command:
+
+### `dbshiftcli init`
 Initialize schema migration in the current directory. This creates:
 - `migrations/` directory for SQL files
 - Configuration file (`.env` or `schema.config.js`)
 - Example migration file
 
-### `dbshift migrate [options]`
+### `dbshiftcli migrate [options]`
 Run pending migrations in order.
 
 Options:
 - `-e, --env <environment>` - Specify environment (default: development)
 
-### `dbshift status [options]`
+### `dbshiftcli status [options]`
 Show the status of all migrations (completed, pending, failed).
 
 Options:
 - `-e, --env <environment>` - Specify environment (default: development)
 
-### `dbshift create <name> [options]`
+### `dbshiftcli create <name> [options]`
 Create a new migration file with proper naming convention.
 
 Options:
 - `-a, --author <author>` - Specify author name (default: Admin)
 
-### `dbshift config [options]`
+### `dbshiftcli config [options]`
 Show current database configuration.
 
 Options:
 - `-e, --env <environment>` - Specify environment (default: development)
 
-### `dbshift config-init [options]`
+### `dbshiftcli config-init [options]`
 Interactive database configuration setup wizard.
 
 Options:
 - `-e, --env <environment>` - Specify environment (default: development)
 
-### `dbshift config-set [options]`
+### `dbshiftcli config-set [options]`
 Set database configuration values directly from command line.
 
 Options:
@@ -86,7 +113,7 @@ Options:
 - `--user <user>` - Database username
 - `--password <password>` - Database password
 
-### `dbshift ping [options]`
+### `dbshiftcli ping [options]`
 Test database connection quickly and efficiently.
 
 Options:
@@ -126,32 +153,52 @@ DBShift provides flexible configuration management with multiple commands:
 
 ### Quick Configuration Examples
 
+#### Interactive Mode (Easy for beginners)
+```bash
+# Start interactive mode
+dbshift
+
+# Use configuration commands:
+/config                    # Enter configuration menu
+/config show              # Show current configuration  
+/config init              # Interactive setup
+/ping                     # Test connection
+```
+
+#### CLI Mode (Great for automation)
 ```bash
 # Show current configuration
-dbshift config                                    # Development environment
-dbshift config -e production                      # Production environment
+dbshiftcli config                                    # Development environment
+dbshiftcli config -e production                      # Production environment
 
 # Interactive setup (recommended for first-time setup)
-dbshift config-init                               # Create new configuration
-dbshift config-init -e production                 # Setup production environment
+dbshiftcli config-init                               # Create new configuration
+dbshiftcli config-init -e production                 # Setup production environment
 
 # Direct configuration (good for scripts and CI/CD)
-dbshift config-set --host=localhost --user=root --password=123456
-dbshift config-set --host=prod-server --user=prod-user -e production
-dbshift config-set --port=3307                    # Update single value
+dbshiftcli config-set --host=localhost --user=root --password=123456
+dbshiftcli config-set --host=prod-server --user=prod-user -e production
+dbshiftcli config-set --port=3307                    # Update single value
 
 # Test database connection
-dbshift ping                                      # Test current configuration
-dbshift ping -e production                       # Test production environment
-dbshift ping --host=testhost --user=testuser     # Quick connection test
+dbshiftcli ping                                      # Test current configuration
+dbshiftcli ping -e production                       # Test production environment
+dbshiftcli ping --host=testhost --user=testuser     # Quick connection test
 ```
 
 ### Configuration Workflow
 
-1. **First Time Setup**: Use `dbshift config-init` for interactive configuration
-2. **Test Connection**: Use `dbshift ping` to verify database connectivity
-3. **View Current Settings**: Use `dbshift config` to see current configuration
-4. **Quick Updates**: Use `dbshift config-set` to change specific values
+#### For New Users (Interactive Mode)
+1. **Start Interactive Mode**: Run `dbshift`
+2. **Setup Configuration**: Use `/config init` for guided setup
+3. **Test Connection**: Use `/ping` to verify connectivity
+4. **Start Using**: Use `/init`, `/create`, `/migrate` commands
+
+#### For Advanced Users (CLI Mode)
+1. **First Time Setup**: Use `dbshiftcli config-init` for interactive configuration
+2. **Test Connection**: Use `dbshiftcli ping` to verify database connectivity
+3. **View Current Settings**: Use `dbshiftcli config` to see current configuration
+4. **Quick Updates**: Use `dbshiftcli config-set` to change specific values
 5. **Multiple Environments**: Use `-e` flag to manage different environments
 
 ## ⚙️ Configuration

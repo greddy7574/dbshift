@@ -277,18 +277,73 @@ Validator.validateDatabaseConnection(config);
 - `validateAuthorName(author)` - Validate author name format
 - `validateDatabaseConnection(config)` - Validate connection parameters
 
+## Interactive Mode (v0.2.4+)
+
+DBShift v0.2.4+ introduces interactive mode for better user experience.
+
+### Interactive Mode Entry
+
+```bash
+# Start interactive mode
+dbshift
+```
+
+### Interactive Commands
+
+| Command | Description | Example |
+|---------|-------------|---------|
+| `/` | Show available commands | `/` |
+| `/init` | Initialize new project | `/init` |
+| `/migrate` | Run pending migrations | `/migrate -e production` |
+| `/status` | Show migration status | `/status` |
+| `/create` | Create new migration | `/create add_users --author=john` |
+| `/config` | Configuration management | `/config` |
+| `/ping` | Test database connection | `/ping --host=localhost` |
+| `/clear` | Clear screen | `/clear` |
+| `q` | Quit interactive mode | `q` |
+
+### Interactive Mode API
+
+```javascript
+const DBShiftInteractive = require('./bin/dbshift');
+
+// Core methods available for extending interactive mode
+class DBShiftInteractive {
+  showWelcome()                    // Display welcome screen
+  showMainMenu()                   // Display main menu  
+  showConfigMenu()                 // Display config submenu
+  handleInput(input)               // Process user input
+  routeCommand(command, args)      // Route commands to handlers
+  parseEnvFromArgs(args)          // Parse environment flags
+  parseAuthorFromArgs(args)       // Parse author flags
+  parsePingOptions(args)          // Parse ping command options
+}
+```
+
+### Context Management
+
+The interactive mode supports context switching:
+
+```javascript
+// Main context - shows all primary commands
+currentContext = 'main'
+
+// Config context - shows configuration commands
+currentContext = 'config'
+```
+
 ## Configuration Management
 
 DBShift v0.2.0+ includes enhanced configuration management commands:
 
 ### Configuration Commands
 
-#### `dbshift config [options]`
+#### `dbshiftcli config [options]`
 Show current database configuration and available environments.
 
 ```bash
-dbshift config                    # Show development config
-dbshift config -e production      # Show production config
+dbshiftcli config                    # Show development config
+dbshiftcli config -e production      # Show production config
 ```
 
 **Output includes:**
@@ -296,12 +351,12 @@ dbshift config -e production      # Show production config
 - Database connection details for specified environment
 - List of all available environments (for schema.config.js)
 
-#### `dbshift config-init [options]`
+#### `dbshiftcli config-init [options]`
 Interactive configuration setup wizard.
 
 ```bash
-dbshift config-init               # Setup development environment
-dbshift config-init -e production # Setup production environment
+dbshiftcli config-init               # Setup development environment
+dbshiftcli config-init -e production # Setup production environment
 ```
 
 **Features:**

@@ -172,7 +172,137 @@ const errorTypes = {
 };
 ```
 
-### 5. 错误处理和重试机制
+### 5. 交互模式架构 (v0.2.4)
+
+#### 设计背景
+随着项目功能增多，CLI 命令数量增长，新用户学习成本上升。参考 Claude Code 的交互体验，设计双模式架构。
+
+#### 设计目标
+- **降低学习成本**: 新用户通过交互式菜单快速上手
+- **保持兼容性**: 现有 CLI 用户和自动化脚本不受影响
+- **统一体验**: 两种模式共享相同的核心逻辑
+
+#### 双模式架构设计
+
+**架构对比**：
+```javascript
+// v0.2.3 及之前：单一 CLI 模式
+bin/dbshift.js → CLI 命令处理
+
+// v0.2.4：双模式架构  
+bin/dbshift.js    → 交互模式入口
+bin/dbshiftcli.js → CLI 模式入口
+```
+
+**用户体验分层**：
+```bash
+# 新手友好：交互模式
+dbshift                    # 进入交互界面
+/init                      # 菜单引导的命令
+/migrate                   
+/                          # 显示帮助菜单
+
+# 专业高效：CLI 模式  
+dbshiftcli init            # 直接执行
+dbshiftcli migrate -e prod # 脚本友好
+```
+
+#### 交互模式技术实现
+
+**核心组件**：
+```javascript
+class DBShiftInteractive {
+  constructor() {
+    this.rl = readline.createInterface()  // 命令行交互
+    this.currentContext = 'main'         // 上下文管理
+  }
+  
+  // 主要功能
+  showWelcome()           // 欢迎界面
+  showMainMenu()          // 主菜单
+  showConfigMenu()        // 配置子菜单  
+  handleInput(input)      // 输入处理
+  routeCommand(cmd, args) // 命令路由
+}
+```
+
+**命令路由系统**：
+```javascript
+// 交互模式命令映射
+const commandMap = {
+  '/init':    () => initCommand(),
+  '/migrate': (args) => migrateCommand(parseOptions(args)),
+  '/config':  () => this.enterConfigContext(),
+  '/ping':    (args) => testConnectionCommand(parseOptions(args))
+};
+```
+
+**参数解析设计**：
+```javascript
+// 统一的参数解析逻辑
+parseEnvFromArgs(args)    // -e production
+parseAuthorFromArgs(args) // --author=john  
+parsePingOptions(args)    // --host=localhost --user=root
+```
+
+#### 上下文切换机制
+
+**状态管理**：
+```javascript
+// 主菜单上下文
+currentContext = 'main'
+showMainMenu()  // 显示所有主要命令
+
+// 配置子菜单上下文
+currentContext = 'config'  
+showConfigMenu()  // 显示配置相关命令
+```
+
+**导航设计**：
+- `/config` → 进入配置子菜单
+- `/back` → 返回主菜单
+- `/` → 显示当前上下文的帮助
+- `q` → 退出交互模式
+
+#### 用户体验优化
+
+**视觉设计**：
+```javascript
+// 欢迎界面
+╔══════════════════════════════════════╗
+║          DBShift v0.2.4           ║  
+║      Interactive Database Migration   ║
+╚══════════════════════════════════════╝
+
+// 彩色输出
+chalk.blue('🔍 Testing database connection...')
+chalk.green('✅ Project initialized successfully!')
+chalk.yellow('⚠ Usage: /create <migration_name>')
+```
+
+**错误处理**：
+- 友好的错误提示
+- 自动恢复到提示符
+- 建议命令和帮助信息
+
+#### 向后兼容策略
+
+**包管理配置**：
+```json
+{
+  "bin": {
+    "dbshift": "bin/dbshift.js",      // 新：交互模式
+    "dbshiftcli": "bin/dbshiftcli.js" // 原CLI模式重命名
+  }
+}
+```
+
+**迁移路径**：
+1. 现有用户：`dbshift` → `dbshiftcli` （功能完全一致）
+2. 新用户：推荐使用 `dbshift` 交互模式
+3. 自动化：继续使用 `dbshiftcli` 进行脚本集成
+
+### 6. 错误处理和重试机制
 
 #### 数据库设计
 ```sql

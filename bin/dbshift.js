@@ -2,6 +2,7 @@
 
 const readline = require('readline');
 const chalk = require('chalk');
+const inquirer = require('inquirer');
 const packageInfo = require('../package.json');
 
 // 导入所有命令处理器 (复用原有的命令逻辑)
@@ -37,6 +38,102 @@ class DBShiftInteractive {
     });
   }
 
+  async showCommandSelector() {
+    // 暂时关闭当前的 readline 接口
+    this.rl.pause();
+    
+    let choices;
+    if (this.currentContext === 'config') {
+      choices = [
+        { name: '📋 Show current configuration', value: '/config show' },
+        { name: '⚙️ Interactive configuration setup', value: '/config init' },
+        { name: '🔧 Set configuration values', value: '/config set' },
+        { name: '🔙 Back to main menu', value: '/back' },
+        { name: '❌ Cancel', value: 'cancel' }
+      ];
+    } else {
+      choices = [
+        { name: '🚀 Initialize new project', value: '/init' },
+        { name: '📦 Run pending migrations', value: '/migrate' },
+        { name: '📊 Show migration status', value: '/status' },
+        { name: '📝 Create new migration', value: '/create', needsInput: true },
+        { name: '⚙️ Configuration management', value: '/config' },
+        { name: '🏓 Test database connection', value: '/ping' },
+        { name: '🧹 Clear screen', value: '/clear' },
+        { name: '❓ Show help', value: '/help' },
+        { name: '❌ Cancel', value: 'cancel' }
+      ];
+    }
+
+    try {
+      const { command } = await inquirer.prompt([
+        {
+          type: 'list',
+          name: 'command',
+          message: 'Select a command:',
+          choices: choices,
+          pageSize: 10
+        }
+      ]);
+
+      // 恢复 readline 接口
+      this.rl.resume();
+
+      if (command === 'cancel') {
+        this.rl.prompt();
+        return;
+      }
+
+      // 处理需要额外输入的命令
+      if (command === '/create') {
+        await this.handleCreateCommand();
+        return;
+      }
+
+      // 处理其他选择的命令
+      await this.handleInput(command);
+    } catch (error) {
+      // 恢复 readline 接口
+      this.rl.resume();
+      console.error(chalk.red('❌ Error:'), error.message);
+      this.rl.prompt();
+    }
+  }
+
+  async handleCreateCommand() {
+    try {
+      const answers = await inquirer.prompt([
+        {
+          type: 'input',
+          name: 'migrationName',
+          message: 'Enter migration name:',
+          validate: (input) => {
+            if (!input.trim()) {
+              return 'Migration name cannot be empty';
+            }
+            if (!/^[a-zA-Z0-9_]+$/.test(input.trim())) {
+              return 'Migration name can only contain letters, numbers, and underscores';
+            }
+            return true;
+          }
+        },
+        {
+          type: 'input',
+          name: 'author',
+          message: 'Enter author name (optional):',
+          default: 'Admin'
+        }
+      ]);
+
+      const command = `/create ${answers.migrationName} --author=${answers.author}`;
+      console.log(chalk.blue(`📝 Creating migration: ${answers.migrationName}`));
+      await this.handleInput(command);
+    } catch (error) {
+      console.error(chalk.red('❌ Error:'), error.message);
+      this.rl.prompt();
+    }
+  }
+
   showWelcome() {
     console.log(chalk.blue.bold(`
 ╔══════════════════════════════════════╗
@@ -44,20 +141,21 @@ class DBShiftInteractive {
 ║      Interactive Database Migration   ║
 ╚══════════════════════════════════════╝
 `));
-    console.log(chalk.gray('Type "/" to see available commands, or "q" to quit\n'));
+    console.log(chalk.gray('Type "/" for interactive command menu, "/help" for text menu, or "q" to quit\n'));
     this.rl.prompt();
   }
 
   showMainMenu() {
     console.log(chalk.cyan('\n📋 Available Commands:'));
     console.log(chalk.gray('──────────────────────'));
+    console.log(chalk.white('/              ') + chalk.gray('Interactive command selector (recommended)'));
     console.log(chalk.white('/init          ') + chalk.gray('Initialize new project'));
     console.log(chalk.white('/migrate       ') + chalk.gray('Run pending migrations'));
     console.log(chalk.white('/status        ') + chalk.gray('Show migration status'));
     console.log(chalk.white('/create        ') + chalk.gray('Create new migration'));
     console.log(chalk.white('/config        ') + chalk.gray('Configuration management'));
     console.log(chalk.white('/ping          ') + chalk.gray('Test database connection'));
-    console.log(chalk.white('/help          ') + chalk.gray('Show detailed help'));
+    console.log(chalk.white('/help          ') + chalk.gray('Show this help menu'));
     console.log(chalk.white('/clear         ') + chalk.gray('Clear screen'));
     console.log(chalk.white('q              ') + chalk.gray('Quit interactive mode'));
     console.log();
@@ -67,6 +165,7 @@ class DBShiftInteractive {
   showConfigMenu() {
     console.log(chalk.cyan('\n⚙️  Configuration Commands:'));
     console.log(chalk.gray('────────────────────────'));
+    console.log(chalk.white('/              ') + chalk.gray('Interactive command selector (recommended)'));
     console.log(chalk.white('/config show   ') + chalk.gray('Show current configuration'));
     console.log(chalk.white('/config init   ') + chalk.gray('Interactive configuration setup'));
     console.log(chalk.white('/config set    ') + chalk.gray('Set configuration values'));
@@ -91,7 +190,13 @@ class DBShiftInteractive {
       }
 
       // 处理菜单命令
-      if (input === '/' || input === '/help' || input === 'help') {
+      if (input === '/') {
+        // 显示交互式命令选择器
+        await this.showCommandSelector();
+        return;
+      }
+      
+      if (input === '/help' || input === 'help') {
         if (this.currentContext === 'config') {
           this.showConfigMenu();
         } else {

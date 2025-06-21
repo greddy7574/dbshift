@@ -13,7 +13,7 @@ const db = new Database({
   host: 'localhost',
   port: 3306,
   user: 'root',
-  password: 'password'
+  password: 'passw/ord'
 });
 
 await db.connect();
@@ -27,7 +27,47 @@ await db.disconnect();
 - `disconnect()` - Close database connection
 - `initializeMigrationTable()` - Create migration tracking table (`dbshift.migration_history`)
 - `executeSQL(sql)` - Execute SQL query
-- `executeSQLFile(filePath)` - Execute SQL file with automatic statement splitting
+- `executeSQLFile(filePath)` - Execute SQL file with standard SQL parsing (v0.2.1+ simplified)
+
+#### executeSQLFile Method (v0.2.1+ Simplified)
+
+**Standard SQL Processing**: DBShift v0.2.1+ uses simplified SQL file processing that works with any SQL editor.
+
+```javascript
+const Database = require('./lib/core/database');
+
+const db = new Database(config);
+await db.connect();
+await db.executeSQLFile('./migrations/20250621001_create_users.sql');
+```
+
+**Processing Logic:**
+```javascript
+async executeSQLFile(filePath) {
+  const content = FileUtils.readFile(filePath);
+  const statements = content
+    .split(';')                           // Split by semicolons
+    .map(stmt => stmt.trim())             // Trim whitespace
+    .filter(stmt => stmt.length > 0);     // Remove empty statements
+  
+  for (const statement of statements) {
+    const sqlContent = statement
+      .replace(/--.*$/gm, '')             // Remove single-line comments
+      .replace(/\/\*[\s\S]*?\*\//g, '')   // Remove multi-line comments
+      .trim();
+    
+    if (!sqlContent) continue;
+    await this.connection.query(sqlContent);
+  }
+}
+```
+
+**Features:**
+- ✅ **Standard SQL**: Uses semicolon (`;`) separators only
+- ✅ **Universal Compatibility**: Works in MySQL Workbench, phpMyAdmin, command line
+- ✅ **Comment Removal**: Automatically removes `--` and `/* */` comments
+- ✅ **No Special Syntax**: No need for `DELIMITER` or `;;` separators
+- ✅ **Editor Friendly**: Files can be executed directly in any SQL tool
 
 ### MigrationManager
 
@@ -109,7 +149,41 @@ FileUtils.listFiles('/path/to/dir', '.sql');
 - `ensureDir(dirPath)` - Create directory if not exists
 - `listFiles(dirPath, extension)` - List files in directory
 - `generateTimestamp()` - Generate YYYYMMDD timestamp
-- `generateSequence(dirPath, dateStr)` - Generate sequence number
+- `generateSequence(dirPath, dateStr, author)` - Generate author-based sequence number (v0.2.1+)
+
+#### generateSequence Method (v0.2.1+)
+
+**Author-Based Sequence Numbering**: This method implements independent sequence numbering per author to prevent team collaboration conflicts.
+
+```javascript
+const FileUtils = require('./lib/utils/fileUtils');
+
+// Generate sequence for different authors on the same day
+const aliceSeq = FileUtils.generateSequence('./migrations', '20250621', 'alice');  // Returns '01'
+const bobSeq = FileUtils.generateSequence('./migrations', '20250621', 'bob');      // Returns '01' (independent)
+const aliceSeq2 = FileUtils.generateSequence('./migrations', '20250621', 'alice'); // Returns '02'
+```
+
+**Parameters:**
+- `dirPath` (string): Path to migrations directory
+- `dateStr` (string): Date string in YYYYMMDD format
+- `author` (string): Author name for sequence grouping
+
+**Returns:** Two-digit sequence number as string (e.g., '01', '02', '99')
+
+**Behavior:**
+- Filters migration files by date prefix and author name
+- Finds the maximum sequence number for the given author and date
+- Returns the next available sequence number
+- Each author maintains independent sequence numbering
+- Prevents conflicts in multi-developer environments
+
+**Example file matching:**
+```
+20250621001_alice_create_users.sql  → alice sequence 01
+20250621001_bob_create_posts.sql    → bob sequence 01 (no conflict)
+20250621002_alice_add_index.sql     → alice sequence 02
+```
 
 ### Validator
 

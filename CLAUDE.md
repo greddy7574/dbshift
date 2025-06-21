@@ -6,21 +6,73 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 DBShift 是一个现代化的 MySQL 数据库迁移工具，灵感来自 Flyway。它提供了简单易用的 CLI 界面，用于数据库版本控制和自动化迁移。项目采用 Node.js + MySQL2 技术栈，设计为全局 npm 包。
 
+### 版本历史
+- **v0.2.1+**: 引入作者分组序号机制，解决多人协作冲突
+- **v0.2.0**: 添加配置管理命令（config, config-init, config-set）
+- **v0.1.x**: 基础迁移功能和CLI架构
+
+### 核心特性
+- 🔢 **作者分组序号**: 每个开发者独立的序号系统，避免团队协作冲突
+- ⚙️ **灵活配置管理**: 支持 .env 和 schema.config.js 两种配置方式
+- 🔄 **失败重试机制**: 基于唯一约束的安全重试系统
+- 🌍 **多环境支持**: development, staging, production 环境隔离
+- 📝 **标准SQL兼容**: 支持任意SQL编辑器执行的标准语法
+- 🚀 **自动化CI/CD**: GitHub Actions 双源发布到 NPM 和 GitHub Packages
+
 ## 核心架构
 
 ### CLI 工具结构
-- `bin/schema.js`: CLI 入口文件，处理命令行参数
-- `lib/commands/`: 各个命令的实现（init, migrate, status, create, config）
-- `lib/core/`: 核心功能模块（database, config, migration）
-- `package.json`: NPM 包配置，包含 bin 字段用于全局安装
+- `bin/dbshift.js`: CLI 入口文件，处理命令行参数和子命令路由
+- `lib/commands/`: 各个命令的实现
+  - `init.js`: 项目初始化，创建目录和配置文件
+  - `migrate.js`: 执行待处理的迁移文件
+  - `status.js`: 查看迁移状态和历史
+  - `create.js`: 创建新的迁移文件（支持作者分组序号）
+  - `config/`: 配置管理命令组
+    - `index.js`: 显示当前配置
+    - `init.js`: 交互式配置向导
+    - `set.js`: 命令行直接设置配置
+- `lib/core/`: 核心功能模块
+  - `database.js`: 数据库连接和SQL执行
+  - `config.js`: 配置文件加载和验证
+  - `migration.js`: 迁移文件管理和执行逻辑
+- `lib/utils/`: 工具类
+  - `fileUtils.js`: 文件操作和序号生成（包含作者分组逻辑）
+  - `logger.js`: 彩色日志输出
+  - `validator.js`: 输入验证
+- `package.json`: NPM 包配置，bin 字段指向 `dbshift` 全局命令
 
 ### 迁移文件命名规范
 SQL 迁移文件遵循严格的命名规范：`YYYYMMDDNN_Author_description.sql`
 - `YYYYMMDDNN`: 版本号（年月日+序号）
-- `Author`: 作者名（如 Admin, Greddy 等）
+- `Author`: 作者名（如 Admin, greddy, jerry 等）
 - `description`: 功能描述
 
-示例：`20241220001_Admin_create_users_table.sql`
+### 🔢 作者分组序号机制 (v0.2.1+)
+**解决的问题**: 传统的全局序号在多人协作时容易产生冲突
+- Alice 创建: `20250621001_Alice_xxx.sql`
+- Bob 创建: `20250621002_Bob_xxx.sql`
+- Alice 再创建时无法使用 003，因为已被占用
+
+**新的解决方案**: 每个作者独立的序号系统
+```bash
+# 同一天不同作者可以使用相同序号
+20250621001_Alice_create_users.sql    # Alice的第1个
+20250621001_Bob_create_posts.sql      # Bob的第1个（无冲突）
+20250621002_Alice_add_index.sql       # Alice的第2个
+20250621002_Bob_add_comments.sql      # Bob的第2个（无冲突）
+```
+
+**实现原理**:
+- `FileUtils.generateSequence(dir, date, author)` 按作者过滤文件
+- 查找该作者当天的最大序号，返回 max + 1
+- 保证同一作者的序号连续，不同作者的序号独立
+
+**优势**:
+- ✅ 消除团队协作中的序号冲突
+- ✅ Git merge 更加顺畅
+- ✅ 清晰的作者责任划分
+- ✅ 向后兼容现有文件
 
 ### 用户项目结构
 用户使用 CLI 工具后的项目结构：
@@ -35,16 +87,28 @@ user-project/
 
 ### 本地测试 CLI 工具
 ```bash
-node bin/schema.js --help
-node bin/schema.js init
-node bin/schema.js migrate
+node bin/dbshift.js --help
+node bin/dbshift.js init
+node bin/dbshift.js create "test_migration" --author="developer"
+node bin/dbshift.js migrate
+node bin/dbshift.js status
+node bin/dbshift.js config
 ```
 
 ### 全局安装测试
 ```bash
 npm link                    # 本地链接到全局
-schema --help              # 测试全局命令
-npm unlink -g schema-shift # 取消链接
+dbshift --help             # 测试全局命令
+dbshift init               # 测试项目初始化
+npm unlink -g dbshift      # 取消链接
+```
+
+### 作者分组序号测试
+```bash
+# 测试不同作者独立序号
+node bin/dbshift.js create "feature1" --author="alice"   # 应该生成 001
+node bin/dbshift.js create "feature2" --author="bob"     # 应该生成 001
+node bin/dbshift.js create "feature3" --author="alice"   # 应该生成 002
 ```
 
 ### 发布到 NPM
@@ -73,6 +137,24 @@ module.exports = {
 ```
 
 ## CLI 命令
+
+### 迁移文件命名规则
+
+**文件格式**: `YYYYMMDDNN_Author_description.sql`
+
+**v0.2.1+ 按作者分组序号优化**:
+- 解决多人协作时的序号冲突问题
+- 每个作者有独立的序号流水线
+- 例如：Alice的文件: 01, 02, 03...，Bob的文件: 01, 02, 03...
+- 避免团队开发时的merge conflicts
+
+**序号生成逻辑**:
+```javascript
+// FileUtils.generateSequence(dirPath, dateStr, author)
+// 1. 筛选同日期同作者的文件
+// 2. 找出该作者的最大序号
+// 3. 返回 max + 1
+```
 
 ### 开发时常用命令
 ```bash
@@ -212,3 +294,45 @@ CREATE TABLE `dbshift`.`migration_history` (
 - **版本管理**: 通过 git 标签触发自动发布
 - **双仓库发布**: NPM + GitHub Packages 并行发布
 - **发布文档**: 自动生成详细的 release notes
+
+## 最新开发指导 (v0.2.1+)
+
+### 作者序号功能开发要点
+1. **核心逻辑**: `FileUtils.generateSequence()` 方法
+   - 按日期和作者过滤文件
+   - 使用 `versionPart.substring(versionPart.length - 2)` 提取序号
+   - 返回该作者的最大序号 + 1
+
+2. **测试覆盖**: `test/utils/fileUtils.sequence.test.js`
+   - 新作者从01开始
+   - 不同作者独立序号
+   - 不同日期独立计算
+   - 处理最大序号99
+   - 忽略格式错误的文件
+
+3. **向后兼容**: 现有文件命名不受影响，新功能只在创建新文件时生效
+
+### SQL文件处理简化 (v0.2.1+)
+- **移除复杂解析**: 不再处理 DELIMITER 和特殊分隔符
+- **标准SQL兼容**: 使用标准分号分隔，支持任意SQL编辑器
+- **注释处理**: 自动移除单行注释(`--`)和多行注释(`/* */`)
+
+### 文档维护策略
+- **CLAUDE.md**: Claude开发指导，包含架构和实现细节
+- **README.md**: 用户使用指南，重点在功能和使用方法
+- **docs/API.md**: 详细的API规格和代码示例
+- **docs/CI-CD.md**: CI/CD流程和操作指南
+- **docs/DESIGN.md**: 设计决策和架构思考
+
+### 开发流程最佳实践
+1. **功能开发**: 先写测试，再实现功能
+2. **文档更新**: 每个功能完成后立即更新相关文档
+3. **版本发布**: 使用语义化版本控制，通过git标签触发CI/CD
+4. **团队协作**: 利用作者分组序号机制避免冲突
+
+### 未来规划
+- [ ] PostgreSQL 支持
+- [ ] 迁移回滚功能  
+- [ ] 干运行模式(dry-run)
+- [ ] 更多数据库支持
+- [ ] Web UI 管理界面

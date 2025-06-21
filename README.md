@@ -163,6 +163,31 @@ Migration files follow a strict naming convention:
 - `Author`: Author name
 - `description`: Brief description
 
+### 🔢 Author-Based Sequence Numbering
+
+DBShift v0.2.1+ uses **author-based sequence numbering** to prevent conflicts in team collaboration:
+
+**Traditional Problem:**
+```
+20250621001_Alice_create_users.sql    ← Alice creates first
+20250621002_Bob_create_posts.sql      ← Bob creates second  
+20250621003_Alice_add_index.sql       ← Conflict! Alice can't use 003
+```
+
+**DBShift Solution:**
+```
+20250621001_Alice_create_users.sql    ← Alice: sequence 01
+20250621001_Bob_create_posts.sql      ← Bob: sequence 01 (independent)
+20250621002_Alice_add_index.sql       ← Alice: sequence 02 (continues)
+20250621002_Bob_add_comments.sql      ← Bob: sequence 02 (independent)
+```
+
+**Benefits:**
+- ✅ **No Conflicts**: Each author has independent sequence numbering
+- ✅ **Team Friendly**: Multiple developers can work simultaneously
+- ✅ **Clear Ownership**: Easy to identify who created which migration
+- ✅ **Merge Safe**: Git merges work smoothly without sequence conflicts
+
 ### Example Migration
 
 DBShift uses standard SQL syntax that can be executed in any SQL editor:
@@ -199,16 +224,26 @@ CREATE INDEX `idx_users_email` ON `users` (`email`);
 
 ## 🔧 Features
 
-- **Simple Setup**: Initialize with one command
-- **Flexible Configuration**: Multiple ways to manage database settings
-- **Interactive Setup**: Easy database configuration wizard
-- **Command-line Configuration**: Direct config updates for automation
-- **Multiple Environments**: Support for dev/staging/prod configs
-- **Template System**: Auto-generated migration templates
-- **Status Tracking**: See which migrations are completed
-- **Retry Mechanism**: Failed migrations can be safely re-executed
-- **Error Handling**: Clear error messages and suggestions
-- **Flyway Compatible**: Similar workflow to Flyway
+### Core Migration Features
+- **🔢 Author-Based Sequence Numbering**: Independent sequence numbering per author prevents team collaboration conflicts
+- **📝 Standard SQL Syntax**: Compatible with any SQL editor (MySQL Workbench, phpMyAdmin, etc.)
+- **🔄 Retry Mechanism**: Failed migrations can be safely re-executed with automatic state management
+- **📊 Status Tracking**: Complete migration history with execution timestamps
+- **🎯 Template System**: Auto-generated migration templates for different use cases
+
+### Configuration & Setup
+- **⚡ Simple Setup**: Initialize with one command
+- **⚙️ Flexible Configuration**: Support for `.env` and `schema.config.js` formats
+- **🎮 Interactive Setup**: Easy database configuration wizard
+- **🤖 Command-line Configuration**: Direct config updates for automation and CI/CD
+- **🌍 Multiple Environments**: Support for development/staging/production configs
+
+### Developer Experience
+- **👥 Team Friendly**: No sequence conflicts in multi-developer environments
+- **🔍 Clear Error Messages**: Detailed error information with solution suggestions
+- **🎨 Colored Output**: Beautiful CLI interface with progress indicators
+- **📋 Flyway Compatible**: Similar workflow and concepts to Flyway
+- **🚀 CI/CD Ready**: GitHub Actions integration with automated testing and publishing
 
 ## 📊 Migration Status
 
@@ -302,20 +337,55 @@ npm install -g @greddy7574/dbshift
 
 MIT License - see LICENSE file for details.
 
+## 📚 Version History
+
+### v0.2.1 (Latest)
+- 🔢 **Author-Based Sequence Numbering**: Resolves team collaboration conflicts
+- 📝 **Simplified SQL Processing**: Standard SQL syntax compatible with any editor
+- 🧪 **Enhanced Testing**: Comprehensive test coverage for new features
+- 📖 **Documentation Updates**: Complete guides and API documentation
+
+### v0.2.0
+- ⚙️ **Configuration Management**: `config`, `config-init`, `config-set` commands
+- 🌍 **Multi-Environment Support**: Development, staging, production configs
+- 🔄 **Retry Mechanism**: Safe re-execution of failed migrations
+- 🚀 **CI/CD Integration**: GitHub Actions automated testing and publishing
+
+### v0.1.x
+- 📦 **Initial Release**: Basic migration functionality
+- 🎯 **Core Commands**: `init`, `migrate`, `status`, `create`
+- 💾 **Database Tracking**: Migration history table
+- 📁 **Project Structure**: Standard migration file organization
+
 ## 🆚 Comparison with Flyway
 
 | Feature | DBShift | Flyway |
 |---------|-------------|---------|
 | Language | Node.js | Java |
-| Database | MySQL | Multiple |
-| Setup | npm install | Java installation |
-| Configuration | .env or .js | Properties file |
+| Database | MySQL (PostgreSQL planned) | Multiple databases |
+| Setup | `npm install -g dbshift` | Java + Flyway installation |
+| Configuration | `.env` or `schema.config.js` | `flyway.conf` properties |
+| Team Collaboration | Author-based sequence numbering | Global sequence numbering |
+| SQL Compatibility | Standard SQL (any editor) | Flyway-specific syntax |
 | Learning Curve | Simple | Moderate |
+| CI/CD Integration | GitHub Actions built-in | Manual setup |
 
 ## 🚀 Roadmap
 
+### Short Term (v0.3.x)
 - [ ] PostgreSQL support
-- [ ] Migration rollback
-- [ ] Dry run mode
-- [ ] Migration validation
-- [ ] Team collaboration features
+- [ ] Migration rollback functionality
+- [ ] Dry run mode for safe testing
+- [ ] Migration validation and linting
+
+### Medium Term (v0.4.x+)
+- [ ] Web UI for migration management
+- [ ] Database diff and schema comparison
+- [ ] Automated migration generation
+- [ ] Integration with popular ORMs
+
+### Long Term
+- [ ] Multi-database support (MongoDB, SQLite)
+- [ ] Cloud deployment templates
+- [ ] Enterprise features and SSO
+- [ ] Migration analytics and reporting

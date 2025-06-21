@@ -25,26 +25,40 @@ git push origin feature/new-feature
 
 #### Pull Request
 - 创建 PR 到 `main` 或 `develop` 分支
-- 自动触发测试工作流
-- 必须通过所有测试才能合并
+- 本地运行测试确保代码质量 (`npm test`)
+- 代码审查和合并到主分支
+- 发布时在CI中运行完整测试套件
 
 ### 2. 测试流程
 
-#### 🧪 自动测试 (.github/workflows/test.yml)
+#### 🧪 自动测试
 
-**触发条件:**
-- Push 到 `main`, `develop` 分支
-- 创建或更新 Pull Request
+**当前状态**: DBShift 使用发布时测试策略，在发布工作流中集成测试步骤。
 
-**测试矩阵:**
-- Node.js 版本: 16, 18, 20
-- 运行环境: Ubuntu Latest
+**测试集成在 (.github/workflows/publish.yml):**
+- 发布前运行完整测试套件
+- 确保发布的代码质量
+- 只有测试通过才进行发布
 
-**测试步骤:**
-1. **单元测试**: Jest 测试框架
-2. **代码质量**: 基本语法和编码检查
-3. **安全审计**: npm audit 依赖安全检查
-4. **覆盖率**: Codecov 集成 (仅 Node.js 18)
+**本地开发测试:**
+```bash
+# 运行所有测试
+npm test
+
+# 运行特定测试文件
+npm test -- --testPathPatterns=fileUtils.sequence.test.js
+
+# 生成覆盖率报告
+npm run test:coverage
+
+# 监控模式(开发时使用)
+npm run test:watch
+```
+
+**测试框架**: Jest
+- 单元测试覆盖核心功能
+- 特别关注作者序号生成逻辑
+- 文件操作和配置管理测试
 
 ### 3. 发布流程
 

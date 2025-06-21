@@ -279,7 +279,7 @@ Validator.validateDatabaseConnection(config);
 
 ## Interactive Mode (v0.3.0+)
 
-DBShift v0.3.0+ introduces enhanced interactive mode with Tab auto-completion. v0.3.1 fixes critical session persistence issues.
+DBShift v0.3.0+ introduces enhanced interactive mode with Tab auto-completion. v0.3.1 fixes critical session persistence issues. v0.3.2 perfects the user experience with Claude Code-like display format.
 
 ### Interactive Mode Entry
 
@@ -343,6 +343,7 @@ showCommandSelector() {
 
 | Command | Description | Example |
 |---------|-------------|---------|
+| `/` | **Command menu** - Shows Claude Code-style "command + description" format | `/` |
 | `/` + Tab | **Tab auto-completion** - Real command completion with descriptions | `/` + Tab |
 | `/init` | Initialize new project | `/init` |
 | `/migrate` | Run pending migrations | `/migrate -e production` |
@@ -481,7 +482,38 @@ try {
 }
 ```
 
-### Interactive Mode Persistence (v0.3.1 Fix)
+### Interactive Mode Improvements
+
+#### User Experience Enhancement (v0.3.2)
+
+**Claude Code-Style Display Format**:
+v0.3.2 introduces a major visual improvement to match the Claude Code experience:
+
+**Command Selector Format Change**:
+```
+Before (v0.3.1):
+🚀 Initialize new project
+📦 Run pending migrations
+📊 Show migration status
+
+After (v0.3.2):
+/init                Initialize new project
+/migrate             Run pending migrations
+/status              Show migration status
+```
+
+**Key Improvements**:
+- **Clear Command Visibility**: Left side shows actual executable commands
+- **Consistent Alignment**: Uniform spacing for better readability  
+- **Reduced Visual Noise**: Fewer emojis, focus on functionality
+- **Tab Completion Consistency**: Same format across menu and auto-completion
+
+**Final Session Persistence Fix**:
+- **Eliminated Duplicate Output**: Fixed repeated log messages in routeCommand
+- **Complete Session Recovery**: All commands (success/error) return to interactive prompt
+- **Verified Workflow**: `/status` -> `/help` -> `q` flow works perfectly
+
+#### Interactive Mode Persistence (v0.3.1 Fix)
 
 #### Problem Resolution
 

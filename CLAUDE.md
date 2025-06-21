@@ -7,6 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 DBShift 是一个现代化的 MySQL 数据库迁移工具，灵感来自 Flyway。它提供了简单易用的 CLI 界面，用于数据库版本控制和自动化迁移。项目采用 Node.js + MySQL2 技术栈，设计为全局 npm 包。
 
 ### 版本历史
+- **v0.3.2**: 完善交互模式用户体验 - 類似 Claude Code 的顯示格式和完全修復的會話持久性
 - **v0.3.1**: 修复交互模式命令执行后退出的重大bug，完善错误处理机制
 - **v0.3.0**: 实现交互模式 Tab 自动补全功能，提供类似 Claude Code 的用户体验
 - **v0.2.4**: 添加交互模式支持，双模式架构设计（交互模式 + CLI模式）
@@ -17,7 +18,8 @@ DBShift 是一个现代化的 MySQL 数据库迁移工具，灵感来自 Flyway�
 
 ### 核心特性
 - 🎯 **Tab 自动补全**: readline completer 函数提供真正的 Tab 补全体验，支持命令过滤和描述显示
-- 🔄 **交互模式持久性**: 命令执行后保持会话活跃，使用环境变量控制 process.exit() 行为
+- 🔄 **交互模式持久性**: 命令执行后保持会话活跃，完全修復會話終止問題
+- 🎨 **Claude Code 體驗**: 命令選擇器採用 "命令 + 描述" 格式，清晰易讀
 - 🔢 **作者分组序号**: 每个开发者独立的序号系统，避免团队协作冲突
 - ⚙️ **灵活配置管理**: 支持 .env 和 schema.config.js 两种配置方式
 - 🖥️ **双模式架构**: 交互模式（dbshift）+ CLI模式（dbshiftcli），满足不同使用场景
@@ -565,6 +567,45 @@ static async executeWithErrorHandling(fn) {
 - ✅ 保持用户会话连续性
 - ✅ 提供清晰的错误反馈
 - ✅ 不影响 CLI 模式的原有行为
+
+#### 用戶體驗完善 (v0.3.2 改進)
+
+**顯示格式優化**:
+v0.3.2 進一步改進交互模式的視覺體驗，採用類似 Claude Code 的命令顯示格式：
+
+**命令選擇器格式改進**:
+```
+之前格式：
+🚀 Initialize new project
+📦 Run pending migrations
+📊 Show migration status
+
+v0.3.2 新格式：
+/init                Initialize new project
+/migrate             Run pending migrations
+/status              Show migration status
+```
+
+**核心改進**:
+- **清晰的命令標識**: 左側顯示實際可輸入的命令
+- **統一的對齊格式**: 命令和描述整齊對齊，提升可讀性
+- **移除視覺干擾**: 減少表情符號，專注於功能本身
+- **一致的體驗**: Tab 補全和命令選擇器使用相同格式
+
+**最終修復**:
+- **完全解決重複輸出**: 修復 routeCommand 中的重複日誌問題
+- **確保會話持久性**: 所有命令（成功/失敗）都能正確返回交互模式
+- **優化錯誤處理流程**: 錯誤信息清晰且不中斷會話
+
+**測試驗證**:
+```bash
+dbshift> /status      # 執行命令
+❌ Failed to get status: No configuration found
+dbshift> /help        # 會話保持活躍！
+📋 Available Commands:
+...
+dbshift> q            # 正常退出
+```
 
 ### 交互模式架构 (v0.2.4)
 

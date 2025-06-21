@@ -5,9 +5,6 @@ const chalk = require('chalk');
 const inquirer = require('inquirer');
 const packageInfo = require('../package.json');
 
-// 啟用 keypress 事件支持 - 不使用 raw mode，讓 readline 處理
-readline.emitKeypressEvents(process.stdin);
-
 // 导入所有命令处理器 (复用原有的命令逻辑)
 const initCommand = require('../lib/commands/init');
 const migrateCommand = require('../lib/commands/migrate');
@@ -65,16 +62,9 @@ class DBShiftInteractive {
     if (line.startsWith('/')) {
       const hits = completions.filter(c => c.startsWith(line));
 
-      // 如果只有一個匹配，直接返回
-      if (hits.length === 1) {
-        return [hits, line];
-      }
-
       // 如果有多個匹配，顯示所有選項
       if (hits.length > 1) {
-        // 清除當前行並顯示所有可用選項
-        console.log('\n');
-        console.log(chalk.blue('📋 Available Commands:'));
+        console.log('\n' + chalk.blue('📋 Available Commands:'));
         console.log('─'.repeat(60));
 
         hits.forEach(hit => {
@@ -86,8 +76,6 @@ class DBShiftInteractive {
         console.log('─'.repeat(60));
         console.log(chalk.yellow('💡 Press Tab again to cycle through options'));
         console.log();
-
-        return [hits, line];
       }
 
       return [hits, line];
@@ -95,48 +83,24 @@ class DBShiftInteractive {
 
     // 如果沒有輸入 "/"，提示使用斜槓命令
     if (line === '') {
-      console.log('\n');
-      console.log(chalk.blue('💡 Available options:'));
+      console.log('\n' + chalk.blue('💡 Available options:'));
       console.log(`${chalk.cyan('/')} ${chalk.gray('                   Show command menu')}`);
       console.log(`${chalk.cyan('/[command] + Tab')} ${chalk.gray('   Auto-complete commands')}`);
       console.log(`${chalk.cyan('q')} ${chalk.gray('                   Quit interactive mode')}`);
       console.log();
-      return [[], line];
     }
 
     return [[], line];
   }
 
   setupReadline() {
-    // 啟用即時按鍵監聽
-    this.currentInput = '';
-    this.isShowingLiveCommands = false;
-    this.lastCommandsSignature = null;
-    
     // 使用 readline 的內建事件來監聽輸入變化
     this.rl.on('SIGINT', () => {
-      this.hideLiveCommands();
       console.log(chalk.yellow('\nGoodbye! 👋'));
       process.exit(0);
     });
-    
-    // 攔截 readline 的輸出來檢測輸入變化
-    const originalWrite = this.rl._writeToOutput;
-    this.rl._writeToOutput = (stringToWrite) => {
-      // 執行原始寫入
-      const result = originalWrite.call(this.rl, stringToWrite);
-      
-      // 在下一個事件循環中檢查輸入變化
-      setImmediate(() => {
-        const currentLine = this.rl.line || '';
-        this.updateLiveCommandsForInput(currentLine);
-      });
-      
-      return result;
-    };
 
     this.rl.on('line', async (line) => {
-      this.hideLiveCommands();
       await this.handleInput(line.trim());
     });
 
@@ -146,73 +110,6 @@ class DBShiftInteractive {
     });
   }
 
-  updateLiveCommandsForInput(input) {
-    // 更新當前輸入狀態
-    this.currentInput = input;
-    
-    // 只有當輸入以 "/" 開始且長度大於1時才顯示即時命令過濾
-    // 這避免了輸入單個字母 "i" 時的混淆
-    if (input.startsWith('/') && input.length > 1) {
-      this.showLiveCommands(input);
-    } else if (this.isShowingLiveCommands) {
-      this.hideLiveCommands();
-    }
-  }
-
-  showLiveCommands(filter = '/') {
-    const currentCommands = this.currentContext === 'config' 
-      ? this.commands.config 
-      : this.commands.main;
-    
-    // 過濾匹配的命令
-    const filteredCommands = currentCommands.filter(cmd => 
-      cmd.command.startsWith(filter)
-    );
-    
-    if (filteredCommands.length === 0) {
-      if (this.isShowingLiveCommands) {
-        this.hideLiveCommands();
-      }
-      return;
-    }
-    
-    // 避免重複顯示相同的命令列表
-    const commandsSignature = filteredCommands.map(cmd => cmd.command).join('|');
-    if (this.isShowingLiveCommands && this.lastCommandsSignature === commandsSignature) {
-      return;
-    }
-    
-    // 清除之前的命令顯示（如果有的話）
-    if (this.isShowingLiveCommands) {
-      // 簡單清除：移動到行首並清除到行尾
-      process.stdout.write('\r\x1B[K');
-    }
-    
-    // 顯示過濾後的命令 - 使用緊湊格式避免換行
-    const header = chalk.blue('📋 ') + chalk.gray(`${filteredCommands.length} commands:`);
-    const commandList = filteredCommands
-      .slice(0, 5) // 最多顯示5個命令避免過長
-      .map(cmd => chalk.cyan(cmd.command))
-      .join(chalk.gray(' | '));
-    
-    const moreIndicator = filteredCommands.length > 5 ? chalk.gray(' ...') : '';
-    const output = `${header} ${commandList}${moreIndicator}`;
-    
-    // 單行顯示，避免換行問題
-    process.stdout.write('\n' + output);
-    
-    this.isShowingLiveCommands = true;
-    this.lastCommandsSignature = commandsSignature;
-  }
-
-  hideLiveCommands() {
-    if (this.isShowingLiveCommands) {
-      // 清除當前命令顯示行
-      process.stdout.write('\r\x1B[K');
-      this.isShowingLiveCommands = false;
-      this.lastCommandsSignature = null;
-    }
-  }
 
   async showCommandSelector() {
     // 暂时关闭当前的 readline 接口

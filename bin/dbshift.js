@@ -111,6 +111,7 @@ class DBShiftInteractive {
     // 啟用即時按鍵監聽
     this.currentInput = '';
     this.isShowingLiveCommands = false;
+    this.lastCommandsSignature = null;
     
     // 使用 readline 的內建事件來監聽輸入變化
     this.rl.on('SIGINT', () => {
@@ -174,52 +175,41 @@ class DBShiftInteractive {
       return;
     }
     
-    // 如果命令列表沒有變化，不重新繪製
-    if (this.isShowingLiveCommands && this.lastFilteredCommands && 
-        JSON.stringify(this.lastFilteredCommands) === JSON.stringify(filteredCommands)) {
+    // 避免重複顯示相同的命令列表
+    const commandsSignature = filteredCommands.map(cmd => cmd.command).join('|');
+    if (this.isShowingLiveCommands && this.lastCommandsSignature === commandsSignature) {
       return;
     }
     
-    // 清除之前的顯示
+    // 清除之前的命令顯示（如果有的話）
     if (this.isShowingLiveCommands) {
-      // 移動光標上移並清除從光標到螢幕底部的內容
-      const linesToClear = this.lastCommandCount + 4; // 命令數量 + 標題 + 分隔線 + 提示行
-      for (let i = 0; i < linesToClear; i++) {
-        process.stdout.write('\x1b[1A'); // 上移一行
-        process.stdout.write('\x1b[2K'); // 清除整行
-      }
+      // 簡單清除：移動到行首並清除到行尾
+      process.stdout.write('\r\x1B[K');
     }
     
-    // 顯示過濾後的命令
-    console.log('\n' + chalk.blue('📋 Available Commands:'));
-    console.log('─'.repeat(60));
+    // 顯示過濾後的命令 - 使用緊湊格式避免換行
+    const header = chalk.blue('📋 ') + chalk.gray(`${filteredCommands.length} commands:`);
+    const commandList = filteredCommands
+      .slice(0, 5) // 最多顯示5個命令避免過長
+      .map(cmd => chalk.cyan(cmd.command))
+      .join(chalk.gray(' | '));
     
-    filteredCommands.forEach(cmd => {
-      const commandPart = chalk.cyan(cmd.command.padEnd(20));
-      const descPart = chalk.gray(cmd.description);
-      console.log(`  ${commandPart} ${descPart}`);
-    });
+    const moreIndicator = filteredCommands.length > 5 ? chalk.gray(' ...') : '';
+    const output = `${header} ${commandList}${moreIndicator}`;
     
-    console.log('─'.repeat(60));
-    console.log(chalk.yellow(`💡 Found ${filteredCommands.length} matching command(s). Press Enter to select or ESC to cancel.`));
+    // 單行顯示，避免換行問題
+    process.stdout.write('\n' + output);
     
     this.isShowingLiveCommands = true;
-    this.lastCommandCount = filteredCommands.length;
-    this.lastFilteredCommands = filteredCommands;
-    
-    // 重新顯示輸入提示符但不輸出，讓 readline 處理
-    // readline 會自動顯示當前輸入
+    this.lastCommandsSignature = commandsSignature;
   }
 
   hideLiveCommands() {
     if (this.isShowingLiveCommands) {
-      // 清除命令列表顯示
-      const linesToClear = this.lastCommandCount + 4;
-      for (let i = 0; i < linesToClear; i++) {
-        process.stdout.write('\x1b[1A'); // 上移一行
-        process.stdout.write('\x1b[2K'); // 清除整行
-      }
+      // 清除當前命令顯示行
+      process.stdout.write('\r\x1B[K');
       this.isShowingLiveCommands = false;
+      this.lastCommandsSignature = null;
     }
   }
 
@@ -319,7 +309,7 @@ class DBShiftInteractive {
     }
   }
 
-  showWelcome() {
+  showWelcome(showPrompt = true) {
     console.log(chalk.blue.bold(`
 ╔══════════════════════════════════════╗
 ║          DBShift v${packageInfo.version}              ║
@@ -327,7 +317,9 @@ class DBShiftInteractive {
 ╚══════════════════════════════════════╝
 `));
     console.log(chalk.gray('Type "/" + Tab for auto-completion, "/help" for help menu, or "q" to quit\n'));
-    this.rl.prompt();
+    if (showPrompt) {
+      this.rl.prompt();
+    }
   }
 
   showMainMenu() {

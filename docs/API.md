@@ -279,7 +279,7 @@ Validator.validateDatabaseConnection(config);
 
 ## Interactive Mode (v0.3.0+)
 
-DBShift v0.3.0+ introduces enhanced interactive mode with auto-completion for better user experience.
+DBShift v0.3.0+ introduces enhanced interactive mode with Tab auto-completion. v0.3.1 fixes critical session persistence issues.
 
 ### Interactive Mode Entry
 
@@ -288,12 +288,38 @@ DBShift v0.3.0+ introduces enhanced interactive mode with auto-completion for be
 dbshift
 ```
 
-### Auto-Completion Feature (v0.3.0)
+### Tab Auto-Completion Feature (v0.3.0+)
 
-The interactive mode now includes smart auto-completion triggered by typing `/`:
+The interactive mode includes real Tab auto-completion using readline's completer function:
 
 ```javascript
-// Auto-completion system
+// Tab auto-completion completer function
+completer(line) {
+  const currentCommands = this.currentContext === 'config' 
+    ? this.commands.config 
+    : this.commands.main;
+  
+  const completions = currentCommands.map(cmd => cmd.command);
+  
+  if (line.startsWith('/')) {
+    const hits = completions.filter(c => c.startsWith(line));
+    
+    // Display matching commands with descriptions
+    if (hits.length > 1) {
+      console.log('\n📋 Available Commands:');
+      hits.forEach(hit => {
+        const cmdInfo = currentCommands.find(c => c.command === hit);
+        console.log(`  ${hit.padEnd(15)} ${cmdInfo.description}`);
+      });
+    }
+    
+    return [hits, line];
+  }
+  
+  return [[], line];
+}
+
+// Legacy command selector (still available)
 showCommandSelector() {
   // 1. Pause current readline interface
   this.rl.pause();
@@ -317,7 +343,7 @@ showCommandSelector() {
 
 | Command | Description | Example |
 |---------|-------------|---------|
-| `/` | **Auto-completion menu** - Smart command picker | `/` |
+| `/` + Tab | **Tab auto-completion** - Real command completion with descriptions | `/` + Tab |
 | `/init` | Initialize new project | `/init` |
 | `/migrate` | Run pending migrations | `/migrate -e production` |
 | `/status` | Show migration status | `/status` |
@@ -455,15 +481,18 @@ try {
 }
 ```
 
-### Interactive Mode Persistence (v0.3.0 Fix)
+### Interactive Mode Persistence (v0.3.1 Fix)
 
 #### Problem Resolution
 
-**Issue**: Commands would terminate the interactive session after execution.
+**Issue**: Commands would terminate the interactive session after execution (v0.3.0 critical bug).
 
-**Root Cause**: Command modules called `process.exit(1)` on errors, terminating the entire Node.js process.
+**Root Cause**: 
+- Command modules called `process.exit(1)` on errors
+- **Critical**: `ErrorHandler.executeWithErrorHandling()` called `process.exit(0)` on **success**
+- Both successful and failed commands terminated the entire Node.js process
 
-**Solution**: Environment-aware error handling system.
+**Solution**: Comprehensive environment-aware error handling system (v0.3.1).
 
 #### Implementation
 
@@ -471,6 +500,28 @@ try {
 ```javascript
 // Set when interactive mode starts
 process.env.DBSHIFT_INTERACTIVE_MODE = 'true';
+```
+
+**Critical ErrorHandler Fix (v0.3.1)**:
+```javascript
+// lib/utils/errorHandler.js - The core issue was here
+static async executeWithErrorHandling(fn) {
+  try {
+    await fn();
+    // v0.3.1 CRITICAL FIX: Don't exit on success in interactive mode
+    if (!process.env.DBSHIFT_INTERACTIVE_MODE) {
+      process.exit(0);  // Only exit in CLI mode
+    }
+    // Interactive mode: simply return, keep session alive
+  } catch (error) {
+    const exitCode = this.handle(error);
+    if (!process.env.DBSHIFT_INTERACTIVE_MODE) {
+      process.exit(exitCode);
+    } else {
+      throw error; // Let interactive mode handle the error
+    }
+  }
+}
 ```
 
 **Command Module Adaptation**:

@@ -172,23 +172,51 @@ const errorTypes = {
 };
 ```
 
-### 5. 自动补全功能架构 (v0.3.0)
+### 5. Tab 自动补全功能架构 (v0.3.0+)
 
 #### 设计背景
-v0.2.4 的交互模式虽然降低了学习成本，但用户仍需记住命令名称。参考 Claude Code 的 "/" 触发自动补全体验，进一步提升易用性。
+v0.2.4 的交互模式虽然降低了学习成本，但用户仍需记住命令名称。參考 Claude Code 的 Tab 自動補全體驗，實現真正的 readline completer 功能。
 
 #### 设计目标
-- **零记忆负担**: 输入 "/" 即可看到所有可用命令
-- **上下文智能**: 根据当前菜单状态显示相关命令
-- **引导式操作**: 复杂命令提供分步骤引导
-- **无缝集成**: 与现有交互模式完美融合
+- **真正的 Tab 補全**: 使用 readline completer 函數，類似 Claude Code 體驗
+- **上下文智能**: 根據當前菜單狀態顯示相關命令
+- **即時過濾**: 輸入部分命令後 Tab 鍵過濾匹配項
+- **描述顯示**: 每個命令都有詳細描述說明
 
-#### 核心创新点
+#### 核心技術實現
 ```javascript
-// "/" 触发机制设计
-if (input === '/') {
-  await this.showCommandSelector();  // 显示智能选择器
-  return;
+// readline completer 函數
+this.rl = readline.createInterface({
+  input: process.stdin,
+  output: process.stdout,
+  prompt: chalk.blue('dbshift> '),
+  completer: this.completer.bind(this)  // 關鍵：綁定 completer 函數
+});
+
+// Tab 補全核心邏輯
+completer(line) {
+  const currentCommands = this.currentContext === 'config' 
+    ? this.commands.config 
+    : this.commands.main;
+  
+  const completions = currentCommands.map(cmd => cmd.command);
+  
+  if (line.startsWith('/')) {
+    const hits = completions.filter(c => c.startsWith(line));
+    
+    // 多個匹配時顯示詳細信息
+    if (hits.length > 1) {
+      console.log('\n📋 Available Commands:');
+      hits.forEach(hit => {
+        const cmdInfo = currentCommands.find(c => c.command === hit);
+        console.log(`  ${hit.padEnd(15)} ${cmdInfo.description}`);
+      });
+    }
+    
+    return [hits, line];
+  }
+  
+  return [[], line];
 }
 ```
 
@@ -241,26 +269,28 @@ generateContextChoices() {
 - 复杂命令: 分步引导 (如 /create → 输入迁移名 → 输入作者)
 - 参数验证: 实时输入验证和错误提示
 
-#### v0.3.0 关键问题修复
+#### v0.3.1 關鍵問題修復
 
-**问题识别**:
-在 v0.3.0 发布后，发现了两个关键的用户体验问题：
-1. 用户报告自动补全功能"没有工作"
-2. 任何命令执行后会"跳出交互模式"
+**問題識別**:
+在 v0.3.0 發布後，發現了兩個關鍵的用戶體驗問題：
+1. 用戶報告自動補全功能"沒有作用"，期望真正的 Tab 補全
+2. 任何命令執行後會"跳出交互模式"，無法保持會話連續性
 
-**问题分析**:
+**問題分析**:
 
-*问题1 - 自动补全功能访问*:
-- **用户期望**: 输入 "/" 应显示命令选择器
-- **实际情况**: 功能正常工作，但用户测试方式不当
-- **根本原因**: 文档说明不够清晰，用户未能正确触发功能
+*問題1 - Tab 自動補全功能*:
+- **用戶期望**: 像 Claude Code 一樣的 Tab 補全體驗
+- **v0.3.0 實際**: 只有 "/" 觸發命令選擇器，不是真正的 Tab 補全
+- **根本原因**: 未實現 readline completer 函數
 
-*问题2 - 交互模式终止*:
-- **用户期望**: 命令执行后继续留在交互模式
-- **实际问题**: 命令执行后程序退出
-- **根本原因**: 命令模块中的 `process.exit(1)` 调用终止整个 Node.js 进程
+*問題2 - 交互模式會話終止*:
+- **用戶期望**: 命令執行後繼續留在交互模式
+- **實際問題**: 命令執行後程序退出（成功或失敗都退出）
+- **根本原因**: 
+  - 命令模塊中的 `process.exit(1)` 調用（錯誤時）
+  - **關鍵發現**: `ErrorHandler.executeWithErrorHandling()` 在**成功時**也調用 `process.exit(0)`
 
-**解决方案设计**:
+**v0.3.1 解決方案設計**:
 
 ```javascript
 // 环境变量标识系统

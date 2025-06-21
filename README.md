@@ -2,7 +2,7 @@
 
 A simple and powerful MySQL database migration tool inspired by Flyway.
 
-✨ **New in v0.3.0**: Interactive mode for better user experience!
+✨ **New in v0.3.1**: Fixed interactive mode persistence + Tab auto-completion!
 
 ## 🚀 Quick Start
 
@@ -22,15 +22,16 @@ DBShift offers two modes to suit different use cases:
 # Start interactive mode
 dbshift
 
-# Then use commands like:
+# Then use Tab auto-completion:
+# Type "/" and press Tab for command suggestions
 # /init          - Initialize new project
 # /create        - Create new migration
 # /migrate       - Run migrations
 # /status        - Check migration status
 # /config        - Configuration management
 # /ping          - Test database connection
-# /              - Show all available commands
-# q              - Quit
+# /help          - Show help menu
+# q              - Quit (commands persist in session!)
 ```
 
 #### ⚡ CLI Mode (Great for automation and scripts)
@@ -65,17 +66,18 @@ When you run `dbshift`, you enter interactive mode where you can use these comma
 | `q` | Quit interactive mode | `q` |
 
 💡 **Key Features**:
-- **Persistent Session**: Commands execute and return to the prompt - no need to restart!
-- **Auto-completion**: Type `/` to see all available commands with descriptions
-- **Error Recovery**: Failed commands show helpful errors and keep you in the session
-- **Easy Discovery**: Perfect for newcomers who don't need to memorize commands
+- **🎯 Tab Auto-Completion**: Press Tab after "/" for real command completion like Claude Code
+- **🔄 Session Persistence**: Commands execute and return to prompt - no session exit!
+- **📝 Smart Error Handling**: Failed commands show helpful errors and keep session active
+- **🖥️ Context-Aware**: Different command sets for main and config modes
+- **💡 Easy Discovery**: Perfect for newcomers who don't need to memorize commands
 
 ✨ **How to Use Interactive Mode**:
 1. Run `dbshift` to start interactive mode
-2. Type `/` to see the command menu
-3. Use arrow keys to navigate and press Enter to select
+2. Type `/` + Tab for auto-completion or press Enter for menu
+3. Use partial commands like `/m` + Tab to filter options
 4. Commands execute and return to prompt for the next action
-5. Type `q` only when you want to exit
+5. Session stays active until you type `q` to quit
 
 ### CLI Mode Commands
 
@@ -321,7 +323,8 @@ CREATE INDEX `idx_users_email` ON `users` (`email`);
 ## 🔧 Features
 
 ### Core Migration Features
-- **🎯 Interactive Auto-Completion**: Type "/" to see all commands with smart suggestions
+- **🎯 Tab Auto-Completion**: Real Tab completion with command filtering and descriptions (v0.3.0+)
+- **🔄 Interactive Mode Persistence**: Commands no longer exit the session, stays active until quit (v0.3.1+)
 - **🔢 Author-Based Sequence Numbering**: Independent sequence numbering per author prevents team collaboration conflicts
 - **📝 Standard SQL Syntax**: Compatible with any SQL editor (MySQL Workbench, phpMyAdmin, etc.)
 - **🔄 Retry Mechanism**: Failed migrations can be safely re-executed with automatic state management

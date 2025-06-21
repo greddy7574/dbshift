@@ -7,7 +7,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 DBShift 是一个现代化的 MySQL 数据库迁移工具，灵感来自 Flyway。它提供了简单易用的 CLI 界面，用于数据库版本控制和自动化迁移。项目采用 Node.js + MySQL2 技术栈，设计为全局 npm 包。
 
 ### 版本历史
-- **v0.3.0**: 实现交互模式自动补全功能，大幅提升用户体验
+- **v0.3.1**: 修复交互模式命令执行后退出的重大bug，完善错误处理机制
+- **v0.3.0**: 实现交互模式 Tab 自动补全功能，提供类似 Claude Code 的用户体验
 - **v0.2.4**: 添加交互模式支持，双模式架构设计（交互模式 + CLI模式）
 - **v0.2.3**: 添加 ping 命令用于数据库连接测试，重构连接测试逻辑
 - **v0.2.1+**: 引入作者分组序号机制，解决多人协作冲突
@@ -15,7 +16,8 @@ DBShift 是一个现代化的 MySQL 数据库迁移工具，灵感来自 Flyway�
 - **v0.1.x**: 基础迁移功能和CLI架构
 
 ### 核心特性
-- 🎯 **智能自动补全**: 交互模式支持 "/" 触发命令选择器，提供 Claude Code 体验
+- 🎯 **Tab 自动补全**: readline completer 函数提供真正的 Tab 补全体验，支持命令过滤和描述显示
+- 🔄 **交互模式持久性**: 命令执行后保持会话活跃，使用环境变量控制 process.exit() 行为
 - 🔢 **作者分组序号**: 每个开发者独立的序号系统，避免团队协作冲突
 - ⚙️ **灵活配置管理**: 支持 .env 和 schema.config.js 两种配置方式
 - 🖥️ **双模式架构**: 交互模式（dbshift）+ CLI模式（dbshiftcli），满足不同使用场景
@@ -449,10 +451,52 @@ async handleCreateCommand() {
 - **取消机制**: 随时可以取消操作，回到命令提示符
 - **错误处理**: 输入验证和友好的错误提示
 
-#### 交互模式错误处理机制 (v0.3.0 修复)
+#### Tab 自动补全功能 (v0.3.0+)
 
-**核心问题解决**:
-交互模式初版存在命令执行后退出的问题，通过以下机制彻底解决：
+**實現類似 Claude Code 的補全體驗**:
+
+**readline completer 函數**:
+```javascript
+completer(line) {
+  const currentCommands = this.currentContext === 'config' 
+    ? this.commands.config 
+    : this.commands.main;
+  
+  const completions = currentCommands.map(cmd => cmd.command);
+  
+  // 命令過濾和補全
+  if (line.startsWith('/')) {
+    const hits = completions.filter(c => c.startsWith(line));
+    
+    // 多個匹配時顯示詳細信息
+    if (hits.length > 1) {
+      console.log('\n📋 Available Commands:');
+      hits.forEach(hit => {
+        const cmdInfo = currentCommands.find(c => c.command === hit);
+        console.log(`  ${hit.padEnd(15)} ${cmdInfo.description}`);
+      });
+    }
+    
+    return [hits, line];
+  }
+  
+  return [[], line];
+}
+```
+
+**使用方法**:
+1. **輸入 "/" 然後按 Tab** - 顯示所有命令和描述
+2. **輸入部分命令（如 "/m"）+ Tab** - 顯示匹配的命令
+3. **空白處按 Tab** - 提示使用斜槓命令
+
+**上下文感知**:
+- **main 模式**: `/init`, `/migrate`, `/status`, `/create`, `/config`, `/ping`, `/help`, `/clear`, `q`
+- **config 模式**: `/config show`, `/config init`, `/config set`, `/back`
+
+#### 交互模式錯誤處理機制 (v0.3.1 修復)
+
+**核心問題解決**:
+交互模式 v0.3.0 版本存在命令執行後退出的嚴重 bug，v0.3.1 通過以下機制彻底解決：
 
 **环境变量标识系统**:
 ```javascript
@@ -486,11 +530,35 @@ case '/init':
   break; // 继续保持在交互模式
 ```
 
-**修改的关键文件**:
-- `lib/commands/init.js` - 项目初始化错误处理
-- `lib/commands/create.js` - 迁移创建错误处理
-- `lib/commands/test-connection.js` - 连接测试错误处理
-- `bin/dbshift.js` - 交互模式核心错误处理逻辑
+**v0.3.1 修復的關鍵文件**:
+- `lib/utils/errorHandler.js` - **核心修復**: executeWithErrorHandling 不再在成功時調用 process.exit(0)
+- `lib/commands/status.js` - 狀態檢查命令錯誤處理
+- `lib/commands/config/index.js` - 配置顯示命令錯誤處理  
+- `lib/commands/config/init.js` - 配置初始化錯誤處理
+- `lib/commands/config/set.js` - 配置設置錯誤處理
+- `lib/commands/init.js` - 項目初始化錯誤處理
+- `lib/commands/create.js` - 遷移創建錯誤處理
+- `lib/commands/test-connection.js` - 連接測試錯誤處理
+
+**ErrorHandler 核心修復**:
+```javascript
+static async executeWithErrorHandling(fn) {
+  try {
+    await fn();
+    // v0.3.1 修復：在交互模式下不退出進程
+    if (!process.env.DBSHIFT_INTERACTIVE_MODE) {
+      process.exit(0);
+    }
+  } catch (error) {
+    const exitCode = this.handle(error);
+    if (!process.env.DBSHIFT_INTERACTIVE_MODE) {
+      process.exit(exitCode);
+    } else {
+      throw error; // 抛出错误供交互模式处理
+    }
+  }
+}
+```
 
 **优势**:
 - ✅ 错误后自动恢复到命令提示符

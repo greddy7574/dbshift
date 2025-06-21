@@ -1,0 +1,184 @@
+name: 🚀 Publish to NPM & GitHub Packages
+
+on:
+  push:
+    tags:
+      - 'v*'  # 触发条件：推送任何以 v 开头的标签
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    name: 🧪 Run Tests
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+        
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          
+      - name: 📋 Install dependencies
+        run: npm ci
+        
+      - name: 🧪 Run tests
+        run: npm test
+        
+      - name: ⚡ Run test coverage
+        run: npm run test:coverage
+
+  publish:
+    needs: test
+    runs-on: ubuntu-latest
+    name: 📦 Publish to NPM
+    permissions:
+      contents: read
+      packages: read
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+        
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          registry-url: 'https://registry.npmjs.org'
+          cache: 'npm'
+          
+      - name: 📋 Install dependencies
+        run: npm ci
+        
+      - name: 🏷️ Extract version from tag
+        id: get_version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+        
+      - name: 🚀 Publish to NPM
+        run: npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          
+
+  publish-gpr:
+    needs: test
+    runs-on: ubuntu-latest
+    name: 📦 Publish to GitHub Packages
+    permissions:
+      contents: read
+      packages: write
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+        
+      - name: 📦 Setup Node.js for GPR
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          registry-url: 'https://npm.pkg.github.com'
+          scope: '@greddy7574'
+          cache: 'npm'
+          
+      - name: 📋 Install dependencies
+        run: npm ci
+        
+      - name: 🏷️ Extract version from tag
+        id: get_version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+        
+      - name: 📝 Create scoped package.json for GPR
+        run: |
+          jq '.name = "@greddy7574/dbshift"' package.json > package-gpr.json
+          mv package-gpr.json package.json
+        
+      - name: 📝 Create .npmrc for GitHub Packages
+        run: echo "@greddy7574:registry=https://npm.pkg.github.com" > .npmrc
+        
+      - name: 🚀 Publish to GitHub Packages
+        run: npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  create-release:
+    needs: [publish, publish-gpr]
+    runs-on: ubuntu-latest
+    name: 🎉 Create GitHub Release
+    permissions:
+      contents: write
+      pull-requests: read
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+        
+      - name: 🏷️ Extract version from tag
+        id: get_version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+        
+      - name: 📝 Generate Release Notes
+        id: release_notes
+        run: |
+          echo "RELEASE_NOTES<<EOF" >> $GITHUB_OUTPUT
+          echo "## 🚀 Release v${{ steps.get_version.outputs.VERSION }}" >> $GITHUB_OUTPUT
+          echo "" >> $GITHUB_OUTPUT
+          echo "### 📦 Package Installation" >> $GITHUB_OUTPUT
+          echo "" >> $GITHUB_OUTPUT
+          echo "**NPM Registry:**" >> $GITHUB_OUTPUT
+          echo "\`\`\`bash" >> $GITHUB_OUTPUT
+          echo "npm install -g dbshift@${{ steps.get_version.outputs.VERSION }}" >> $GITHUB_OUTPUT
+          echo "dbshift --help" >> $GITHUB_OUTPUT
+          echo "\`\`\`" >> $GITHUB_OUTPUT
+          echo "" >> $GITHUB_OUTPUT
+          echo "**GitHub Package Registry:**" >> $GITHUB_OUTPUT
+          echo "\`\`\`bash" >> $GITHUB_OUTPUT
+          echo "npm install -g @greddy7574/dbshift@${{ steps.get_version.outputs.VERSION }}" >> $GITHUB_OUTPUT
+          echo "dbshift --help" >> $GITHUB_OUTPUT
+          echo "\`\`\`" >> $GITHUB_OUTPUT
+          echo "" >> $GITHUB_OUTPUT
+          echo "### 📋 What's Changed" >> $GITHUB_OUTPUT
+          git log --pretty=format:"- %s" $(git describe --tags --abbrev=0 HEAD~1)..HEAD >> $GITHUB_OUTPUT || echo "- Initial release" >> $GITHUB_OUTPUT
+          echo "" >> $GITHUB_OUTPUT
+          echo "" >> $GITHUB_OUTPUT
+          echo "### ✨ Core Features" >> $GITHUB_OUTPUT
+          echo "- 🗄️ MySQL database migration management" >> $GITHUB_OUTPUT
+          echo "- ⚙️ Flexible configuration system (env + JS config)" >> $GITHUB_OUTPUT
+          echo "- 🔄 Retry mechanism for failed migrations" >> $GITHUB_OUTPUT
+          echo "- 🌍 Multi-environment support (dev/staging/prod)" >> $GITHUB_OUTPUT
+          echo "- 📝 Standard SQL syntax compatibility" >> $GITHUB_OUTPUT
+          echo "- 🎯 Flyway-inspired workflow" >> $GITHUB_OUTPUT
+          echo "" >> $GITHUB_OUTPUT
+          echo "### 🛠️ Commands Available" >> $GITHUB_OUTPUT
+          echo "- \`dbshift init\` - Initialize migration project" >> $GITHUB_OUTPUT
+          echo "- \`dbshift migrate\` - Run pending migrations" >> $GITHUB_OUTPUT
+          echo "- \`dbshift status\` - Check migration status" >> $GITHUB_OUTPUT
+          echo "- \`dbshift create\` - Create new migration file" >> $GITHUB_OUTPUT
+          echo "- \`dbshift config\` - View current configuration" >> $GITHUB_OUTPUT
+          echo "- \`dbshift config-init\` - Interactive setup wizard" >> $GITHUB_OUTPUT
+          echo "- \`dbshift config-set\` - Direct configuration updates" >> $GITHUB_OUTPUT
+          echo "" >> $GITHUB_OUTPUT
+          echo "### 🛠️ Technical Stack" >> $GITHUB_OUTPUT
+          echo "- Node.js >= 14.0.0" >> $GITHUB_OUTPUT
+          echo "- MySQL database support" >> $GITHUB_OUTPUT
+          echo "- Commander.js CLI framework" >> $GITHUB_OUTPUT
+          echo "- Standard SQL syntax (works with any SQL editor)" >> $GITHUB_OUTPUT
+          echo "- Jest testing framework" >> $GITHUB_OUTPUT
+          echo "- Automated dual registry publishing" >> $GITHUB_OUTPUT
+          echo "" >> $GITHUB_OUTPUT
+          echo "---" >> $GITHUB_OUTPUT
+          echo "**Created by:** Greddy (greddy7574@gmail.com)" >> $GITHUB_OUTPUT
+          echo "**AI Development Partner:** Claude Code" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+        
+      - name: 🎉 Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ github.ref }}
+          name: Release v${{ steps.get_version.outputs.VERSION }}
+          body: ${{ steps.release_notes.outputs.RELEASE_NOTES }}
+          draft: false
+          prerelease: false
+          generate_release_notes: true

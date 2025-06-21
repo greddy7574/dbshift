@@ -165,6 +165,8 @@ Migration files follow a strict naming convention:
 
 ### Example Migration
 
+DBShift uses standard SQL syntax that can be executed in any SQL editor:
+
 ```sql
 -- Migration: Create users table
 -- Author: Admin
@@ -172,10 +174,10 @@ Migration files follow a strict naming convention:
 -- Version: 2024122001
 
 -- Create database if it doesn't exist
-CREATE DATABASE IF NOT EXISTS `my_app` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;;
+CREATE DATABASE IF NOT EXISTS `my_app` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- Use the database
-USE `my_app`;;
+USE `my_app`;
 
 -- Create users table
 CREATE TABLE IF NOT EXISTS `users` (
@@ -184,11 +186,16 @@ CREATE TABLE IF NOT EXISTS `users` (
   `email` VARCHAR(100) NOT NULL UNIQUE,
   `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Add index for better performance
-CREATE INDEX `idx_users_email` ON `users` (`email`);;
+CREATE INDEX `idx_users_email` ON `users` (`email`);
 ```
+
+**Key Benefits:**
+- ✅ **Standard SQL**: Works in MySQL Workbench, phpMyAdmin, command line
+- ✅ **No Special Syntax**: Uses standard semicolon (`;`) separators
+- ✅ **Universal Compatibility**: Can be executed anywhere
 
 ## 🔧 Features
 
@@ -226,18 +233,55 @@ cd dbshift
 # Install dependencies
 npm install
 
+# Run tests
+npm test
+npm run test:coverage
+
 # Test locally
-node bin/schema.js --help
+node bin/dbshift.js --help
 ```
 
-## 📦 Publishing to NPM
+## 🚀 CI/CD & Publishing
+
+### Automated Publishing Workflow
+
+DBShift uses GitHub Actions for automated testing and publishing:
+
+#### 🧪 Continuous Testing
+- **Trigger**: Push to `main`/`develop` branches, or Pull Requests
+- **Node.js Versions**: 16, 18, 20 (matrix testing)
+- **Checks**: Unit tests, code quality, security audit
+- **Coverage**: Automated coverage reporting via Codecov
+
+#### 📦 Automated Publishing
+- **Trigger**: Push git tags matching `v*` pattern (e.g., `v0.3.0`)
+- **Dual Registry**: Publishes to both NPM and GitHub Packages
+- **GitHub Release**: Auto-creates release with detailed notes
+
+### Manual Release Process
 
 ```bash
-# Build and test
-npm run test
+# 1. Update version and test
+npm version patch  # or minor/major
+npm test
 
-# Publish
-npm publish
+# 2. Push with tags to trigger CI/CD
+git push origin main --tags
+
+# 3. Monitor GitHub Actions
+# Visit: https://github.com/greddy7574/dbshift/actions
+```
+
+### Package Installation Options
+
+**NPM Registry (recommended):**
+```bash
+npm install -g dbshift
+```
+
+**GitHub Package Registry:**
+```bash
+npm install -g @greddy7574/dbshift
 ```
 
 ## ⚠️ Requirements

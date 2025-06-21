@@ -284,3 +284,90 @@ CREATE TABLE `dbshift`.`migration_history` (
 - On retry, `modify_date` is updated while preserving `create_date`
 - Unique constraint prevents duplicate records for the same migration
 - System tracks complete execution history with timestamps
+
+## CI/CD Integration
+
+### GitHub Actions Workflows
+
+DBShift includes automated testing and publishing workflows:
+
+#### Test Workflow (`.github/workflows/test.yml`)
+Triggered on push to main/develop branches or Pull Requests:
+
+```yaml
+name: 🧪 Test & Quality Checks
+# Multi-version Node.js testing (16, 18, 20)
+# Unit tests, code quality, security audit
+```
+
+#### Publish Workflow (`.github/workflows/publish.yml`)
+Triggered on git tag push (v* pattern):
+
+```yaml
+name: 🚀 Publish to NPM & GitHub Packages
+# Dual registry publishing
+# Automated GitHub Release creation
+```
+
+### Publishing API
+
+#### NPM Registry
+```bash
+# Global installation
+npm install -g dbshift
+
+# Version checking
+npm view dbshift version
+npm view dbshift versions --json
+```
+
+#### GitHub Package Registry
+```bash
+# Scoped installation
+npm install -g @greddy7574/dbshift
+
+# Registry configuration
+echo "@greddy7574:registry=https://npm.pkg.github.com" >> .npmrc
+```
+
+### Release Management
+
+#### Semantic Versioning
+- `patch`: Bug fixes (0.1.0 → 0.1.1)
+- `minor`: New features (0.1.0 → 0.2.0)
+- `major`: Breaking changes (0.1.0 → 1.0.0)
+
+#### Automated Release Notes
+Generated release notes include:
+- Package installation instructions
+- What's changed (git log)
+- Core features summary
+- Technical stack information
+- Installation verification commands
+
+### Development Workflow
+
+```bash
+# Development with testing
+npm test                    # Run Jest test suite
+npm run test:coverage       # Generate coverage report
+npm run test:watch          # Watch mode for development
+
+# Version management
+npm version patch           # Update version number
+git push origin main --tags # Trigger publishing workflow
+
+# Monitor CI/CD
+# Visit: https://github.com/greddy7574/dbshift/actions
+```
+
+### Quality Gates
+
+The CI/CD pipeline enforces:
+- **Unit test coverage**: Jest test framework
+- **Multi-version compatibility**: Node.js 16, 18, 20
+- **Security audit**: npm audit for vulnerabilities
+- **Code quality**: Basic syntax and structure validation
+- **Dependency safety**: Automated security scanning
+
+For detailed CI/CD documentation, see [CI-CD.md](./CI-CD.md).

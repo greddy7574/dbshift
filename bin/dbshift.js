@@ -23,7 +23,7 @@ class DBShiftInteractive {
       prompt: chalk.blue('dbshift> '),
       completer: this.completer.bind(this)
     });
-    
+
     this.currentContext = 'main';
     this.commands = this.getAvailableCommands();
     this.setupReadline();
@@ -52,28 +52,28 @@ class DBShiftInteractive {
   }
 
   completer(line) {
-    const currentCommands = this.currentContext === 'config' 
-      ? this.commands.config 
+    const currentCommands = this.currentContext === 'config'
+      ? this.commands.config
       : this.commands.main;
-    
+
     const completions = currentCommands.map(cmd => cmd.command);
-    
+
     // 如果用戶輸入以 "/" 開始，提供命令補全
     if (line.startsWith('/')) {
       const hits = completions.filter(c => c.startsWith(line));
-      
+
       // 如果只有一個匹配，直接返回
       if (hits.length === 1) {
         return [hits, line];
       }
-      
+
       // 如果有多個匹配，顯示所有選項
       if (hits.length > 1) {
         // 清除當前行並顯示所有可用選項
         console.log('\n');
         console.log(chalk.blue('📋 Available Commands:'));
         console.log('─'.repeat(60));
-        
+
         hits.forEach(hit => {
           const cmdInfo = currentCommands.find(c => c.command === hit);
           if (cmdInfo) {
@@ -83,13 +83,13 @@ class DBShiftInteractive {
         console.log('─'.repeat(60));
         console.log(chalk.yellow('💡 Press Tab again to cycle through options'));
         console.log();
-        
+
         return [hits, line];
       }
-      
+
       return [hits, line];
     }
-    
+
     // 如果沒有輸入 "/"，提示使用斜槓命令
     if (line === '') {
       console.log('\n');
@@ -100,7 +100,7 @@ class DBShiftInteractive {
       console.log();
       return [[], line];
     }
-    
+
     return [[], line];
   }
 
@@ -119,7 +119,7 @@ class DBShiftInteractive {
   async showCommandSelector() {
     // 暂时关闭当前的 readline 接口
     this.rl.pause();
-    
+
     let choices;
     if (this.currentContext === 'config') {
       choices = [
@@ -215,8 +215,8 @@ class DBShiftInteractive {
   showWelcome() {
     console.log(chalk.blue.bold(`
 ╔══════════════════════════════════════╗
-║          DBShift v${packageInfo.version}           ║
-║      Interactive Database Migration   ║
+║          DBShift v${packageInfo.version}              ║
+║      Interactive Database Migration  ║
 ╚══════════════════════════════════════╝
 `));
     console.log(chalk.gray('Type "/" + Tab for auto-completion, "/help" for help menu, or "q" to quit\n'));
@@ -273,7 +273,7 @@ class DBShiftInteractive {
         await this.showCommandSelector();
         return;
       }
-      
+
       if (input === '/help' || input === 'help') {
         if (this.currentContext === 'config') {
           this.showConfigMenu();
@@ -308,7 +308,7 @@ class DBShiftInteractive {
     } catch (error) {
       console.error(chalk.red('❌ Error:'), error.message);
     }
-    
+
     this.rl.prompt();
   }
 
@@ -336,10 +336,10 @@ class DBShiftInteractive {
         break;
 
       case '/status':
-        console.log(chalk.blue('📊 Checking migration status...'));
         try {
           const statusEnv = this.parseEnvFromArgs(args);
           await statusCommand({ env: statusEnv });
+          console.log(chalk.green('✅ Status check completed!'));
         } catch (error) {
           console.error(chalk.red('❌ Failed to get status:'), error.message);
         }
@@ -458,7 +458,7 @@ class DBShiftInteractive {
 
   parsePingOptions(args) {
     const options = { env: 'development' };
-    
+
     args.forEach(arg => {
       if (arg.startsWith('--host=')) options.host = arg.split('=')[1];
       if (arg.startsWith('--port=')) options.port = arg.split('=')[1];

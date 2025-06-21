@@ -238,20 +238,33 @@ class DBShiftInteractive {
     switch (command) {
       case '/init':
         console.log(chalk.blue('🚀 Initializing new project...'));
-        await initCommand();
-        console.log(chalk.green('✅ Project initialized successfully!'));
+        try {
+          await initCommand();
+          console.log(chalk.green('✅ Project initialized successfully!'));
+        } catch (error) {
+          console.error(chalk.red('❌ Failed to initialize project:'), error.message);
+        }
         break;
 
       case '/migrate':
         console.log(chalk.blue('📦 Running migrations...'));
-        const env = this.parseEnvFromArgs(args);
-        await migrateCommand({ env });
+        try {
+          const env = this.parseEnvFromArgs(args);
+          await migrateCommand({ env });
+          console.log(chalk.green('✅ Migrations completed successfully!'));
+        } catch (error) {
+          console.error(chalk.red('❌ Migration failed:'), error.message);
+        }
         break;
 
       case '/status':
         console.log(chalk.blue('📊 Checking migration status...'));
-        const statusEnv = this.parseEnvFromArgs(args);
-        await statusCommand({ env: statusEnv });
+        try {
+          const statusEnv = this.parseEnvFromArgs(args);
+          await statusCommand({ env: statusEnv });
+        } catch (error) {
+          console.error(chalk.red('❌ Failed to get status:'), error.message);
+        }
         break;
 
       case '/create':
@@ -259,10 +272,15 @@ class DBShiftInteractive {
           console.log(chalk.yellow('⚠ Usage: /create <migration_name> [--author=<author>]'));
           break;
         }
-        const migrationName = args[0];
-        const author = this.parseAuthorFromArgs(args);
-        console.log(chalk.blue(`📝 Creating migration: ${migrationName}`));
-        await createCommand(migrationName, { author });
+        try {
+          const migrationName = args[0];
+          const author = this.parseAuthorFromArgs(args);
+          console.log(chalk.blue(`📝 Creating migration: ${migrationName}`));
+          await createCommand(migrationName, { author });
+          console.log(chalk.green('✅ Migration file created successfully!'));
+        } catch (error) {
+          console.error(chalk.red('❌ Failed to create migration:'), error.message);
+        }
         break;
 
       case '/config':
@@ -271,13 +289,21 @@ class DBShiftInteractive {
           this.showConfigMenu();
           break;
         }
-        await this.handleConfigCommand(args);
+        try {
+          await this.handleConfigCommand(args);
+        } catch (error) {
+          console.error(chalk.red('❌ Configuration failed:'), error.message);
+        }
         break;
 
       case '/ping':
         console.log(chalk.blue('🏓 Testing database connection...'));
-        const pingOptions = this.parsePingOptions(args);
-        await testConnectionCommand(pingOptions);
+        try {
+          const pingOptions = this.parsePingOptions(args);
+          await testConnectionCommand(pingOptions);
+        } catch (error) {
+          console.error(chalk.red('❌ Connection test failed:'), error.message);
+        }
         break;
 
       default:
@@ -298,13 +324,22 @@ class DBShiftInteractive {
 
     switch (subCommand) {
       case 'show':
-        const env = this.parseEnvFromArgs(restArgs);
-        await showConfigCommand({ env });
+        try {
+          const env = this.parseEnvFromArgs(restArgs);
+          await showConfigCommand({ env });
+        } catch (error) {
+          console.error(chalk.red('❌ Failed to show configuration:'), error.message);
+        }
         break;
 
       case 'init':
-        const initEnv = this.parseEnvFromArgs(restArgs);
-        await configInitCommand({ env: initEnv });
+        try {
+          const initEnv = this.parseEnvFromArgs(restArgs);
+          await configInitCommand({ env: initEnv });
+          console.log(chalk.green('✅ Configuration initialized successfully!'));
+        } catch (error) {
+          console.error(chalk.red('❌ Failed to initialize configuration:'), error.message);
+        }
         break;
 
       case 'set':
@@ -361,6 +396,9 @@ class DBShiftInteractive {
     this.showWelcome();
   }
 }
+
+// 设置交互模式标志
+process.env.DBSHIFT_INTERACTIVE_MODE = 'true';
 
 // 启动交互模式
 const interactive = new DBShiftInteractive();

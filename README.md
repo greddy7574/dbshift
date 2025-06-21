@@ -2,7 +2,7 @@
 
 A simple and powerful MySQL database migration tool inspired by Flyway.
 
-✨ **New in v0.3.2**: Perfect interactive experience like Claude Code + fully fixed session persistence!
+✨ **New in v0.3.4**: Live auto-completion! Type "/" and see commands instantly + smart filtering with "/i"!
 
 ## 🚀 Quick Start
 
@@ -66,19 +66,20 @@ When you run `dbshift`, you enter interactive mode where you can use these comma
 | `q` | Quit interactive mode | `q` |
 
 💡 **Key Features**:
+- **⚡ Live Auto-Completion**: Type "/" to instantly see commands, type "/i" to filter to init commands
 - **🎯 Claude Code Experience**: Command format shows "command + description" for clarity
 - **🔄 Perfect Session Persistence**: All commands (success/error) return to prompt - no exit!
-- **⚡ Real Tab Auto-Completion**: Press Tab after "/" for live command completion
 - **📝 Smart Error Handling**: Failed commands show helpful errors and keep session active
 - **🖥️ Context-Aware**: Different command sets for main and config modes
 - **💡 Zero Learning Curve**: Visual command discovery without memorization
 
 ✨ **How to Use Interactive Mode**:
 1. Run `dbshift` to start interactive mode
-2. Type `/` for menu or `/` + Tab for auto-completion
-3. Use partial commands like `/m` + Tab to filter options  
-4. All commands return to prompt for continuous workflow
-5. Only type `q` when you want to exit
+2. **NEW**: Type `/` to instantly see all commands - no Enter key needed!
+3. **NEW**: Type `/i` to see only commands starting with "/i" (like /init)
+4. Type specific commands like `/init`, `/migrate`, etc.
+5. All commands return to prompt for continuous workflow
+6. Only type `q` when you want to exit
 
 ### CLI Mode Commands
 
@@ -324,9 +325,9 @@ CREATE INDEX `idx_users_email` ON `users` (`email`);
 ## 🔧 Features
 
 ### Core Migration Features
+- **⚡ Live Auto-Completion**: Type "/" for instant command display, type "/i" for smart filtering (v0.3.4)
 - **🎯 Claude Code Experience**: Command selector shows "command + description" format for perfect clarity (v0.3.2)
 - **🔄 Perfect Session Persistence**: All commands return to prompt, completely fixed session termination (v0.3.2)
-- **⚡ Real Tab Auto-Completion**: Live command completion with filtering and descriptions (v0.3.0+)
 - **🔢 Author-Based Sequence Numbering**: Independent sequence numbering per author prevents team collaboration conflicts
 - **📝 Standard SQL Syntax**: Compatible with any SQL editor (MySQL Workbench, phpMyAdmin, etc.)
 - **🔄 Retry Mechanism**: Failed migrations can be safely re-executed with automatic state management
@@ -433,7 +434,13 @@ MIT License - see LICENSE file for details.
 
 ## 📚 Version History
 
-### v0.3.0 (Latest)
+### v0.3.4 (Latest)
+- ⚡ **Live Auto-Completion**: Type "/" to instantly show commands, type "/i" to filter to specific commands
+- 🎯 **Real-time Command Discovery**: No need to press Enter - commands appear as you type
+- 🔍 **Smart Filtering**: Partial commands like "/i" automatically filter to matching options
+- 📖 **Enhanced Documentation**: Updated guides reflecting live auto-completion features
+
+### v0.3.0-v0.3.3
 - 🎯 **Interactive Auto-Completion**: Type "/" for smart command suggestions and guided operations
 - 🧹 **Enhanced User Experience**: Intuitive menus and context-aware help system
 - 🔧 **Improved Error Handling**: Better validation and graceful error recovery

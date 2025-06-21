@@ -5,6 +5,9 @@ const chalk = require('chalk');
 const inquirer = require('inquirer');
 const packageInfo = require('../package.json');
 
+// 啟用 keypress 事件支持 - 不使用 raw mode，讓 readline 處理
+readline.emitKeypressEvents(process.stdin);
+
 // 导入所有命令处理器 (复用原有的命令逻辑)
 const initCommand = require('../lib/commands/init');
 const migrateCommand = require('../lib/commands/migrate');
@@ -105,8 +108,34 @@ class DBShiftInteractive {
   }
 
   setupReadline() {
+    // 啟用即時按鍵監聽
+    this.currentInput = '';
+    this.isShowingLiveCommands = false;
+    
+    // 使用 readline 的內建事件來監聽輸入變化
+    this.rl.on('SIGINT', () => {
+      this.hideLiveCommands();
+      console.log(chalk.yellow('\nGoodbye! 👋'));
+      process.exit(0);
+    });
+    
+    // 攔截 readline 的輸出來檢測輸入變化
+    const originalWrite = this.rl._writeToOutput;
+    this.rl._writeToOutput = (stringToWrite) => {
+      // 執行原始寫入
+      const result = originalWrite.call(this.rl, stringToWrite);
+      
+      // 在下一個事件循環中檢查輸入變化
+      setImmediate(() => {
+        const currentLine = this.rl.line || '';
+        this.updateLiveCommandsForInput(currentLine);
+      });
+      
+      return result;
+    };
 
     this.rl.on('line', async (line) => {
+      this.hideLiveCommands();
       await this.handleInput(line.trim());
     });
 
@@ -114,6 +143,84 @@ class DBShiftInteractive {
       console.log(chalk.yellow('\nGoodbye! 👋'));
       process.exit(0);
     });
+  }
+
+  updateLiveCommandsForInput(input) {
+    // 更新當前輸入狀態
+    this.currentInput = input;
+    
+    // 當輸入以 "/" 開始時顯示即時命令過濾
+    if (input.startsWith('/')) {
+      this.showLiveCommands(input);
+    } else if (this.isShowingLiveCommands) {
+      this.hideLiveCommands();
+    }
+  }
+
+  showLiveCommands(filter = '/') {
+    const currentCommands = this.currentContext === 'config' 
+      ? this.commands.config 
+      : this.commands.main;
+    
+    // 過濾匹配的命令
+    const filteredCommands = currentCommands.filter(cmd => 
+      cmd.command.startsWith(filter)
+    );
+    
+    if (filteredCommands.length === 0) {
+      if (this.isShowingLiveCommands) {
+        this.hideLiveCommands();
+      }
+      return;
+    }
+    
+    // 如果命令列表沒有變化，不重新繪製
+    if (this.isShowingLiveCommands && this.lastFilteredCommands && 
+        JSON.stringify(this.lastFilteredCommands) === JSON.stringify(filteredCommands)) {
+      return;
+    }
+    
+    // 清除之前的顯示
+    if (this.isShowingLiveCommands) {
+      // 移動光標上移並清除從光標到螢幕底部的內容
+      const linesToClear = this.lastCommandCount + 4; // 命令數量 + 標題 + 分隔線 + 提示行
+      for (let i = 0; i < linesToClear; i++) {
+        process.stdout.write('\x1b[1A'); // 上移一行
+        process.stdout.write('\x1b[2K'); // 清除整行
+      }
+    }
+    
+    // 顯示過濾後的命令
+    console.log('\n' + chalk.blue('📋 Available Commands:'));
+    console.log('─'.repeat(60));
+    
+    filteredCommands.forEach(cmd => {
+      const commandPart = chalk.cyan(cmd.command.padEnd(20));
+      const descPart = chalk.gray(cmd.description);
+      console.log(`  ${commandPart} ${descPart}`);
+    });
+    
+    console.log('─'.repeat(60));
+    console.log(chalk.yellow(`💡 Found ${filteredCommands.length} matching command(s). Press Enter to select or ESC to cancel.`));
+    
+    this.isShowingLiveCommands = true;
+    this.lastCommandCount = filteredCommands.length;
+    this.lastFilteredCommands = filteredCommands;
+    
+    // 重新顯示輸入提示符但不輸出，讓 readline 處理
+    // readline 會自動顯示當前輸入
+  }
+
+  hideLiveCommands() {
+    if (this.isShowingLiveCommands) {
+      // 清除命令列表顯示
+      const linesToClear = this.lastCommandCount + 4;
+      for (let i = 0; i < linesToClear; i++) {
+        process.stdout.write('\x1b[1A'); // 上移一行
+        process.stdout.write('\x1b[2K'); // 清除整行
+      }
+      this.isShowingLiveCommands = false;
+    }
   }
 
   async showCommandSelector() {

@@ -277,9 +277,9 @@ Validator.validateDatabaseConnection(config);
 - `validateAuthorName(author)` - Validate author name format
 - `validateDatabaseConnection(config)` - Validate connection parameters
 
-## Interactive Mode (v0.2.4+)
+## Interactive Mode (v0.3.0+)
 
-DBShift v0.2.4+ introduces interactive mode for better user experience.
+DBShift v0.3.0+ introduces enhanced interactive mode with auto-completion for better user experience.
 
 ### Interactive Mode Entry
 
@@ -288,19 +288,79 @@ DBShift v0.2.4+ introduces interactive mode for better user experience.
 dbshift
 ```
 
+### Auto-Completion Feature (v0.3.0)
+
+The interactive mode now includes smart auto-completion triggered by typing `/`:
+
+```javascript
+// Auto-completion system
+showCommandSelector() {
+  // 1. Pause current readline interface
+  this.rl.pause();
+  
+  // 2. Show interactive command picker using inquirer
+  const { command } = await inquirer.prompt([{
+    type: 'list',
+    name: 'command',
+    message: 'Select a command:',
+    choices: contextAwareChoices,
+    pageSize: 10
+  }]);
+  
+  // 3. Resume readline and execute selected command
+  this.rl.resume();
+  await this.handleInput(command);
+}
+```
+
 ### Interactive Commands
 
 | Command | Description | Example |
 |---------|-------------|---------|
-| `/` | Show available commands | `/` |
+| `/` | **Auto-completion menu** - Smart command picker | `/` |
 | `/init` | Initialize new project | `/init` |
 | `/migrate` | Run pending migrations | `/migrate -e production` |
 | `/status` | Show migration status | `/status` |
-| `/create` | Create new migration | `/create add_users --author=john` |
+| `/create` | Create new migration with guided input | `/create` |
 | `/config` | Configuration management | `/config` |
 | `/ping` | Test database connection | `/ping --host=localhost` |
 | `/clear` | Clear screen | `/clear` |
+| `/help` | Show text-based help menu | `/help` |
 | `q` | Quit interactive mode | `q` |
+
+### Guided Command Execution
+
+Complex commands like `/create` now provide step-by-step guidance:
+
+```javascript
+// Example: Guided migration creation
+async handleCreateCommand() {
+  const answers = await inquirer.prompt([
+    {
+      type: 'input',
+      name: 'migrationName',
+      message: 'Enter migration name:',
+      validate: (input) => {
+        if (!input.trim()) return 'Migration name cannot be empty';
+        if (!/^[a-zA-Z0-9_]+$/.test(input.trim())) {
+          return 'Migration name can only contain letters, numbers, and underscores';
+        }
+        return true;
+      }
+    },
+    {
+      type: 'input',
+      name: 'author', 
+      message: 'Enter author name (optional):',
+      default: 'Admin'
+    }
+  ]);
+  
+  const command = `/create ${answers.migrationName} --author=${answers.author}`;
+  console.log(chalk.blue(`📝 Creating migration: ${answers.migrationName}`));
+  await this.handleInput(command);
+}
+```
 
 ### Interactive Mode API
 
@@ -312,6 +372,8 @@ class DBShiftInteractive {
   showWelcome()                    // Display welcome screen
   showMainMenu()                   // Display main menu  
   showConfigMenu()                 // Display config submenu
+  showCommandSelector()            // Display auto-completion menu (v0.3.0)
+  handleCreateCommand()            // Handle guided migration creation (v0.3.0)
   handleInput(input)               // Process user input
   routeCommand(command, args)      // Route commands to handlers
   parseEnvFromArgs(args)          // Parse environment flags
@@ -322,14 +384,75 @@ class DBShiftInteractive {
 
 ### Context Management
 
-The interactive mode supports context switching:
+The interactive mode supports context switching with enhanced menu system:
 
 ```javascript
 // Main context - shows all primary commands
 currentContext = 'main'
+// Available commands: init, migrate, status, create, config, ping, clear, help
 
-// Config context - shows configuration commands
+// Config context - shows configuration commands  
 currentContext = 'config'
+// Available commands: config show, config init, config set, back
+
+// Context-aware command choices
+generateChoicesForContext() {
+  if (this.currentContext === 'config') {
+    return configMenuChoices;
+  } else {
+    return mainMenuChoices;
+  }
+}
+```
+
+### Auto-Completion Implementation Details
+
+#### Choice Generation
+
+```javascript
+// Main menu choices
+const mainMenuChoices = [
+  { name: '🚀 Initialize new project', value: '/init' },
+  { name: '📦 Run pending migrations', value: '/migrate' },
+  { name: '📊 Show migration status', value: '/status' },
+  { name: '📝 Create new migration', value: '/create', needsInput: true },
+  { name: '⚙️ Configuration management', value: '/config' },
+  { name: '🏓 Test database connection', value: '/ping' },
+  { name: '🧹 Clear screen', value: '/clear' },
+  { name: '❓ Show help', value: '/help' },
+  { name: '❌ Cancel', value: 'cancel' }
+];
+
+// Config submenu choices
+const configMenuChoices = [
+  { name: '📋 Show current configuration', value: '/config show' },
+  { name: '⚙️ Interactive configuration setup', value: '/config init' },
+  { name: '🔧 Set configuration values', value: '/config set' },
+  { name: '🔙 Back to main menu', value: '/back' },
+  { name: '❌ Cancel', value: 'cancel' }
+];
+```
+
+#### Interface State Management
+
+```javascript
+// Readline interface lifecycle
+1. Normal state: readline.createInterface() listening for input
+2. Auto-completion state: this.rl.pause() → inquirer takes control
+3. Command execution: this.rl.resume() → back to normal state
+4. Error recovery: catch blocks ensure resume() is called
+
+// Error handling pattern
+try {
+  this.rl.pause();
+  const result = await inquirer.prompt([...]);
+  this.rl.resume();
+  await this.handleSelectedCommand(result.command);
+} catch (error) {
+  this.rl.resume(); // Always resume on error
+  console.error(chalk.red('❌ Error:'), error.message);
+  this.rl.prompt();
+}
 ```
 
 ## Configuration Management

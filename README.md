@@ -53,15 +53,18 @@ When you run `dbshift`, you enter interactive mode where you can use these comma
 
 | Command | Description | Example |
 |---------|-------------|---------|
-| `/` | Show available commands | `/` |
+| `/` | **Auto-completion menu** - Shows all available commands | `/` |
 | `/init` | Initialize new project | `/init` |
 | `/migrate` | Run pending migrations | `/migrate -e production` |
 | `/status` | Show migration status | `/status` |
-| `/create` | Create new migration | `/create add_users --author=john` |
+| `/create` | Create new migration with guided input | `/create` |
 | `/config` | Configuration management | `/config` |
 | `/ping` | Test database connection | `/ping --host=localhost` |
 | `/clear` | Clear screen | `/clear` |
+| `/help` | Show text-based help menu | `/help` |
 | `q` | Quit interactive mode | `q` |
+
+💡 **Tip**: Simply type `/` to see all available commands with descriptions. The auto-completion feature makes it easy to discover and execute commands!
 
 ### CLI Mode Commands
 
@@ -158,8 +161,9 @@ DBShift provides flexible configuration management with multiple commands:
 # Start interactive mode
 dbshift
 
-# Use configuration commands:
-/config                    # Enter configuration menu
+# Use the auto-completion feature:
+/                         # Show all available commands
+/config                   # Enter configuration menu
 /config show              # Show current configuration  
 /config init              # Interactive setup
 /ping                     # Test connection
@@ -190,9 +194,10 @@ dbshiftcli ping --host=testhost --user=testuser     # Quick connection test
 
 #### For New Users (Interactive Mode)
 1. **Start Interactive Mode**: Run `dbshift`
-2. **Setup Configuration**: Use `/config init` for guided setup
-3. **Test Connection**: Use `/ping` to verify connectivity
-4. **Start Using**: Use `/init`, `/create`, `/migrate` commands
+2. **Discover Commands**: Type `/` to see all available options
+3. **Setup Configuration**: Use `/config init` for guided setup
+4. **Test Connection**: Use `/ping` to verify connectivity
+5. **Start Using**: Use `/init`, `/create`, `/migrate` commands
 
 #### For Advanced Users (CLI Mode)
 1. **First Time Setup**: Use `dbshiftcli config-init` for interactive configuration
@@ -303,6 +308,7 @@ CREATE INDEX `idx_users_email` ON `users` (`email`);
 ## 🔧 Features
 
 ### Core Migration Features
+- **🎯 Interactive Auto-Completion**: Type "/" to see all commands with smart suggestions
 - **🔢 Author-Based Sequence Numbering**: Independent sequence numbering per author prevents team collaboration conflicts
 - **📝 Standard SQL Syntax**: Compatible with any SQL editor (MySQL Workbench, phpMyAdmin, etc.)
 - **🔄 Retry Mechanism**: Failed migrations can be safely re-executed with automatic state management
@@ -409,7 +415,13 @@ MIT License - see LICENSE file for details.
 
 ## 📚 Version History
 
-### v0.2.1 (Latest)
+### v0.3.0 (Latest)
+- 🎯 **Interactive Auto-Completion**: Type "/" for smart command suggestions and guided operations
+- 🧹 **Enhanced User Experience**: Intuitive menus and context-aware help system
+- 🔧 **Improved Error Handling**: Better validation and graceful error recovery
+- 📖 **Updated Documentation**: Complete guides reflecting new interactive features
+
+### v0.2.1
 - 🔢 **Author-Based Sequence Numbering**: Resolves team collaboration conflicts
 - 📝 **Simplified SQL Processing**: Standard SQL syntax compatible with any editor
 - 🧪 **Enhanced Testing**: Comprehensive test coverage for new features

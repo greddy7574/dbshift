@@ -172,7 +172,76 @@ const errorTypes = {
 };
 ```
 
-### 5. 交互模式架构 (v0.2.4)
+### 5. 自动补全功能架构 (v0.3.0)
+
+#### 设计背景
+v0.2.4 的交互模式虽然降低了学习成本，但用户仍需记住命令名称。参考 Claude Code 的 "/" 触发自动补全体验，进一步提升易用性。
+
+#### 设计目标
+- **零记忆负担**: 输入 "/" 即可看到所有可用命令
+- **上下文智能**: 根据当前菜单状态显示相关命令
+- **引导式操作**: 复杂命令提供分步骤引导
+- **无缝集成**: 与现有交互模式完美融合
+
+#### 核心创新点
+```javascript
+// "/" 触发机制设计
+if (input === '/') {
+  await this.showCommandSelector();  // 显示智能选择器
+  return;
+}
+```
+
+**为什么选择 "/" 作为触发器？**
+- ✅ 与文件路径语义区分明确
+- ✅ 用户直觉：斜杠通常表示"命令"或"目录"
+- ✅ 单字符输入，操作简便
+- ✅ 不与现有命令冲突
+
+#### 自动补全系统架构
+
+**技术实现栈**:
+- `readline`: 基础输入/输出控制
+- `inquirer`: 提供丰富的交互式界面
+- 状态管理: pause/resume 机制确保无冲突
+
+**核心工作流程**:
+```
+用户输入 "/" 
+    ↓
+暂停 readline 接口
+    ↓
+inquirer 接管，显示命令选择器
+    ↓  
+用户选择命令 (箭头键 + 回车)
+    ↓
+恢复 readline 接口
+    ↓
+执行选择的命令
+```
+
+**上下文敏感设计**:
+```javascript
+// 主菜单上下文 (currentContext = 'main')
+显示: init, migrate, status, create, config, ping, clear, help
+
+// 配置菜单上下文 (currentContext = 'config')  
+显示: config show, config init, config set, back
+
+// 动态选择生成
+generateContextChoices() {
+  return this.currentContext === 'config' 
+    ? this.configMenuChoices 
+    : this.mainMenuChoices;
+}
+```
+
+**复杂命令引导模式**:
+- 简单命令: 直接执行 (如 /init, /status)
+- 复杂命令: 分步引导 (如 /create → 输入迁移名 → 输入作者)
+- 参数验证: 实时输入验证和错误提示
+
+### 6. 交互模式架构 (v0.2.4)
 
 #### 设计背景
 随着项目功能增多，CLI 命令数量增长，新用户学习成本上升。参考 Claude Code 的交互体验，设计双模式架构。
@@ -443,6 +512,7 @@ bin/dbshift.js          # 入口点和路由
 - 迁移回滚功能
 - 干运行模式
 - 更好的错误恢复
+- 自动补全功能的进一步优化
 
 ### 中期扩展 (v0.4.x+)
 - Web管理界面

@@ -7,6 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 DBShift 是一个现代化的 MySQL 数据库迁移工具，灵感来自 Flyway。它提供了简单易用的 CLI 界面，用于数据库版本控制和自动化迁移。项目采用 Node.js + MySQL2 技术栈，设计为全局 npm 包。
 
 ### 版本历史
+- **v0.3.0**: 实现交互模式自动补全功能，大幅提升用户体验
 - **v0.2.4**: 添加交互模式支持，双模式架构设计（交互模式 + CLI模式）
 - **v0.2.3**: 添加 ping 命令用于数据库连接测试，重构连接测试逻辑
 - **v0.2.1+**: 引入作者分组序号机制，解决多人协作冲突
@@ -14,6 +15,7 @@ DBShift 是一个现代化的 MySQL 数据库迁移工具，灵感来自 Flyway�
 - **v0.1.x**: 基础迁移功能和CLI架构
 
 ### 核心特性
+- 🎯 **智能自动补全**: 交互模式支持 "/" 触发命令选择器，提供 Claude Code 体验
 - 🔢 **作者分组序号**: 每个开发者独立的序号系统，避免团队协作冲突
 - ⚙️ **灵活配置管理**: 支持 .env 和 schema.config.js 两种配置方式
 - 🖥️ **双模式架构**: 交互模式（dbshift）+ CLI模式（dbshiftcli），满足不同使用场景
@@ -321,7 +323,116 @@ CREATE TABLE `dbshift`.`migration_history` (
 - **双仓库发布**: NPM + GitHub Packages 并行发布
 - **发布文档**: 自动生成详细的 release notes
 
-## 最新开发指导 (v0.2.1+)
+## 最新开发指导 (v0.3.0+)
+
+### 自动补全功能实现 (v0.3.0)
+
+#### 设计理念
+- **用户体验至上**: 输入 "/" 立即显示可选命令，降低学习成本
+- **上下文敏感**: 根据当前菜单上下文显示相关命令
+- **引导式操作**: 复杂命令（如 create）提供分步引导
+- **优雅降级**: 保持传统文本菜单作为备选方案
+
+#### 技术实现架构
+```javascript
+// 自动补全核心组件
+showCommandSelector() {
+  // 1. 暂停当前 readline 接口
+  this.rl.pause();
+  
+  // 2. 根据上下文生成命令选项
+  const choices = this.generateChoicesForContext();
+  
+  // 3. 使用 inquirer 显示选择界面
+  const { command } = await inquirer.prompt([{
+    type: 'list',
+    name: 'command',
+    message: 'Select a command:',
+    choices: choices,
+    pageSize: 10
+  }]);
+  
+  // 4. 恢复 readline 接口
+  this.rl.resume();
+  
+  // 5. 处理选择的命令
+  await this.handleSelectedCommand(command);
+}
+```
+
+#### 命令分类设计
+```javascript
+// 主菜单命令
+const mainMenuChoices = [
+  { name: '🚀 Initialize new project', value: '/init' },
+  { name: '📦 Run pending migrations', value: '/migrate' },
+  { name: '📊 Show migration status', value: '/status' },
+  { name: '📝 Create new migration', value: '/create', needsInput: true },
+  { name: '⚙️ Configuration management', value: '/config' },
+  { name: '🏓 Test database connection', value: '/ping' },
+  { name: '🧹 Clear screen', value: '/clear' },
+  { name: '❓ Show help', value: '/help' },
+  { name: '❌ Cancel', value: 'cancel' }
+];
+
+// 配置子菜单命令
+const configMenuChoices = [
+  { name: '📋 Show current configuration', value: '/config show' },
+  { name: '⚙️ Interactive configuration setup', value: '/config init' },
+  { name: '🔧 Set configuration values', value: '/config set' },
+  { name: '🔙 Back to main menu', value: '/back' },
+  { name: '❌ Cancel', value: 'cancel' }
+];
+```
+
+#### 复杂命令处理模式
+```javascript
+// 需要额外输入的命令处理
+async handleCreateCommand() {
+  const answers = await inquirer.prompt([
+    {
+      type: 'input',
+      name: 'migrationName',
+      message: 'Enter migration name:',
+      validate: (input) => {
+        if (!input.trim()) return 'Migration name cannot be empty';
+        if (!/^[a-zA-Z0-9_]+$/.test(input.trim())) {
+          return 'Migration name can only contain letters, numbers, and underscores';
+        }
+        return true;
+      }
+    },
+    {
+      type: 'input', 
+      name: 'author',
+      message: 'Enter author name (optional):',
+      default: 'Admin'
+    }
+  ]);
+  
+  const command = `/create ${answers.migrationName} --author=${answers.author}`;
+  await this.handleInput(command);
+}
+```
+
+#### 界面状态管理
+```javascript
+// readline 接口生命周期管理
+1. 正常状态: readline 监听用户输入
+2. 选择状态: pause() -> inquirer 接管 -> resume()
+3. 错误恢复: catch 块中确保 resume() 被调用
+4. 优雅退出: 用户选择 Cancel 或按 Ctrl+C
+
+// 上下文切换
+- currentContext = 'main'   → 显示主菜单命令
+- currentContext = 'config' → 显示配置命令
+```
+
+#### 用户体验优化
+- **视觉层次**: 使用表情符号和颜色区分命令类型
+- **搜索友好**: inquirer 支持上下箭头键和首字母快速选择
+- **取消机制**: 随时可以取消操作，回到命令提示符
+- **错误处理**: 输入验证和友好的错误提示
 
 ### 交互模式架构 (v0.2.4)
 

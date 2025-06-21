@@ -73,7 +73,7 @@ describe('FileUtils', () => {
       fs.existsSync.mockReturnValue(true);
       fs.readdirSync.mockReturnValue([]);
       
-      expect(FileUtils.generateSequence('/path', '20240315')).toBe('01');
+      expect(FileUtils.generateSequence('/path', '20240315', 'Admin')).toBe('01');
     });
 
     test('should increment sequence from existing files', () => {
@@ -83,7 +83,7 @@ describe('FileUtils', () => {
         '2024031502_Admin_test2.sql'
       ]);
       
-      expect(FileUtils.generateSequence('/path', '20240315')).toBe('03');
+      expect(FileUtils.generateSequence('/path', '20240315', 'Admin')).toBe('03');
     });
   });
 });

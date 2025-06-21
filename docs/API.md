@@ -279,7 +279,7 @@ Validator.validateDatabaseConnection(config);
 
 ## Interactive Mode (v0.3.0+)
 
-DBShift v0.3.0+ introduces enhanced interactive mode with Tab auto-completion. v0.3.1 fixes critical session persistence issues. v0.3.2 perfects the user experience with Claude Code-like display format.
+DBShift v0.3.0+ introduces enhanced interactive mode with Tab auto-completion. v0.3.1 fixes critical session persistence issues. v0.3.2 perfects the user experience with Claude Code-like display format. v0.3.4 adds live auto-completion, and v0.3.5 completely fixes session persistence for all commands.
 
 ### Interactive Mode Entry
 
@@ -288,9 +288,66 @@ DBShift v0.3.0+ introduces enhanced interactive mode with Tab auto-completion. v
 dbshift
 ```
 
+### Live Auto-Completion Feature (v0.3.4+)
+
+The interactive mode includes real-time live auto-completion that responds instantly to user input:
+
+#### Live Auto-Completion Implementation (v0.3.4)
+
+```javascript
+// Keypress event detection for live auto-completion
+readline.emitKeypressEvents(process.stdin);
+
+class DBShiftInteractive {
+  setupReadline() {
+    // Intercept readline output to detect input changes
+    const originalWrite = this.rl._writeToOutput;
+    this.rl._writeToOutput = (stringToWrite) => {
+      const result = originalWrite.call(this.rl, stringToWrite);
+      
+      // Check input changes in next event loop
+      setImmediate(() => {
+        const currentLine = this.rl.line || '';
+        this.updateLiveCommandsForInput(currentLine);
+      });
+      
+      return result;
+    };
+  }
+  
+  updateLiveCommandsForInput(input) {
+    if (input.startsWith('/')) {
+      this.showLiveCommands(input);  // Show filtered commands immediately
+    } else if (this.isShowingLiveCommands) {
+      this.hideLiveCommands();       // Hide command list
+    }
+  }
+  
+  showLiveCommands(filter = '/') {
+    const currentCommands = this.currentContext === 'config' 
+      ? this.commands.config 
+      : this.commands.main;
+    
+    // Filter matching commands
+    const filteredCommands = currentCommands.filter(cmd => 
+      cmd.command.startsWith(filter)
+    );
+    
+    // Avoid re-rendering if commands haven't changed
+    if (this.isShowingLiveCommands && this.lastFilteredCommands && 
+        JSON.stringify(this.lastFilteredCommands) === JSON.stringify(filteredCommands)) {
+      return;
+    }
+    
+    // Display filtered commands with smart terminal control
+    // ...
+  }
+}
+```
+
 ### Tab Auto-Completion Feature (v0.3.0+)
 
-The interactive mode includes real Tab auto-completion using readline's completer function:
+The interactive mode also includes traditional Tab auto-completion using readline's completer function:
 
 ```javascript
 // Tab auto-completion completer function
@@ -341,19 +398,25 @@ showCommandSelector() {
 
 ### Interactive Commands
 
-| Command | Description | Example |
-|---------|-------------|---------|
-| `/` | **Command menu** - Shows Claude Code-style "command + description" format | `/` |
-| `/` + Tab | **Tab auto-completion** - Real command completion with descriptions | `/` + Tab |
-| `/init` | Initialize new project | `/init` |
-| `/migrate` | Run pending migrations | `/migrate -e production` |
-| `/status` | Show migration status | `/status` |
-| `/create` | Create new migration with guided input | `/create` |
-| `/config` | Configuration management | `/config` |
-| `/ping` | Test database connection | `/ping --host=localhost` |
-| `/clear` | Clear screen | `/clear` |
-| `/help` | Show text-based help menu | `/help` |
-| `q` | Quit interactive mode | `q` |
+| Command | Description | Example | Session Persistence |
+|---------|-------------|---------|---------------------|
+| `/` | **Live auto-completion** - Shows commands instantly as you type (v0.3.4) | `/` | ✅ |
+| `/` + Tab | **Tab auto-completion** - Traditional command completion with descriptions | `/` + Tab | ✅ |
+| `/init` | Initialize new project | `/init` | ✅ Fixed v0.3.5 |
+| `/migrate` | Run pending migrations | `/migrate -e production` | ✅ |
+| `/status` | Show migration status | `/status` | ✅ Fixed v0.3.5 |
+| `/create` | Create new migration with guided input | `/create` | ✅ Fixed v0.3.5 |
+| `/config` | Configuration management | `/config` | ✅ |
+| `/ping` | Test database connection | `/ping --host=localhost` | ✅ |
+| `/clear` | Clear screen | `/clear` | ✅ |
+| `/help` | Show text-based help menu | `/help` | ✅ |
+| `q` | Quit interactive mode | `q` | N/A (exits) |
+
+#### Key Improvements (v0.3.4 - v0.3.5)
+- **Live Auto-Completion**: Type "/" to instantly see commands, type "/i" to filter to init-related commands
+- **Perfect Session Persistence**: ALL commands now return to prompt after execution (fixed in v0.3.5)
+- **Unified Error Handling**: Consistent ErrorHandler pattern across all commands
+- **Real-time Filtering**: Commands filter as you type without needing to press Enter
 
 ### Guided Command Execution
 

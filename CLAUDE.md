@@ -7,6 +7,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 DBShift 是一个现代化的 MySQL 数据库迁移工具，灵感来自 Flyway。它提供了简单易用的 CLI 界面，用于数据库版本控制和自动化迁移。项目采用 Node.js + MySQL2 技术栈，设计为全局 npm 包。
 
 ### 版本历史
+- **v0.3.5**: 修复所有命令的会话持久性问题，统一错误处理机制
+- **v0.3.4**: 实现即时自动补全功能，输入"/"立即显示命令，支持智能过滤
 - **v0.3.2**: 完善交互模式用户体验 - 類似 Claude Code 的顯示格式和完全修復的會話持久性
 - **v0.3.1**: 修复交互模式命令执行后退出的重大bug，完善错误处理机制
 - **v0.3.0**: 实现交互模式 Tab 自动补全功能，提供类似 Claude Code 的用户体验
@@ -17,8 +19,9 @@ DBShift 是一个现代化的 MySQL 数据库迁移工具，灵感来自 Flyway�
 - **v0.1.x**: 基础迁移功能和CLI架构
 
 ### 核心特性
+- ⚡ **即时自动补全**: 输入"/"立即显示命令，无需按Enter，支持"/i"智能过滤 (v0.3.4)
+- 🔄 **完美会话持久性**: 所有命令执行后保持会话活跃，统一错误处理机制 (v0.3.5)
 - 🎯 **Tab 自动补全**: readline completer 函数提供真正的 Tab 补全体验，支持命令过滤和描述显示
-- 🔄 **交互模式持久性**: 命令执行后保持会话活跃，完全修復會話終止問題
 - 🎨 **Claude Code 體驗**: 命令選擇器採用 "命令 + 描述" 格式，清晰易讀
 - 🔢 **作者分组序号**: 每个开发者独立的序号系统，避免团队协作冲突
 - ⚙️ **灵活配置管理**: 支持 .env 和 schema.config.js 两种配置方式
@@ -605,6 +608,125 @@ dbshift> /help        # 會話保持活躍！
 📋 Available Commands:
 ...
 dbshift> q            # 正常退出
+```
+
+### 即時自動補全功能 (v0.3.4)
+
+#### 設計目標
+用戶要求實現類似現代IDE的即時自動補全功能：
+- 輸入 "/" 時立即顯示所有可用命令
+- 輸入 "/i" 時自動過濾到以 "i" 開頭的命令
+- 無需按 Enter 鍵，真正的即時響應
+
+#### 技術實現
+```javascript
+// 1. 啟用 keypress 事件支持
+readline.emitKeypressEvents(process.stdin);
+
+// 2. 攔截 readline 輸出來檢測輸入變化
+const originalWrite = this.rl._writeToOutput;
+this.rl._writeToOutput = (stringToWrite) => {
+  const result = originalWrite.call(this.rl, stringToWrite);
+  
+  // 在下個事件循環檢查輸入變化
+  setImmediate(() => {
+    const currentLine = this.rl.line || '';
+    this.updateLiveCommandsForInput(currentLine);
+  });
+  
+  return result;
+};
+
+// 3. 即時命令過濾和顯示
+updateLiveCommandsForInput(input) {
+  if (input.startsWith('/')) {
+    this.showLiveCommands(input);  // 立即顯示過濾的命令
+  } else if (this.isShowingLiveCommands) {
+    this.hideLiveCommands();       // 隱藏命令列表
+  }
+}
+```
+
+#### 功能特性
+- **即時響應**: 每次按鍵都會立即更新命令列表
+- **智能過濾**: "/i" 自動過濾到 "/init" 等相關命令
+- **性能優化**: 避免重複渲染，只在命令列表變化時重新繪製
+- **終端控制**: 智能的光標移動和清屏邏輯
+
+#### 用戶體驗
+```bash
+dbshift> /                    # 立即顯示所有命令
+📋 Available Commands:
+────────────────────────────────
+  /init                Initialize new project
+  /migrate             Run pending migrations
+  /status              Show migration status
+  ...
+
+dbshift> /i                   # 立即過濾到 "i" 開頭的命令
+📋 Available Commands:
+────────────────────────────────
+  /init                Initialize new project
+```
+
+### 會話持久性統一修復 (v0.3.5)
+
+#### 問題發現
+在測試 v0.3.4 時發現，雖然修復了大部分命令的會話持久性問題，但仍有命令（如 `/status`、`/create`、`/init`）執行後會退出交互模式。
+
+#### 根本原因分析
+- **status.js**: 沒有使用 `ErrorHandler.executeWithErrorHandling`，直接調用 `process.exit()`
+- **create.js**: 同樣問題，錯誤處理中直接退出進程
+- **init.js**: 也有相同的會話終止問題
+
+#### 統一修復方案
+```javascript
+// 修復前：直接調用 process.exit()
+async function statusCommand(options) {
+  try {
+    // ... 命令邏輯
+  } catch (error) {
+    console.error('Error:', error.message);
+    if (!process.env.DBSHIFT_INTERACTIVE_MODE) {
+      process.exit(1);  // 會導致交互模式退出
+    } else {
+      throw error;
+    }
+  }
+}
+
+// 修復後：使用 ErrorHandler.executeWithErrorHandling
+async function statusCommand(options) {
+  await ErrorHandler.executeWithErrorHandling(async () => {
+    try {
+      // ... 命令邏輯
+    } catch (error) {
+      if (error.code === 'ECONNREFUSED') {
+        throw new DatabaseError('Database connection failed', error);
+      }
+      throw error;  // ErrorHandler 會根據模式決定是否退出
+    }
+  });
+}
+```
+
+#### 修復覆蓋範圍
+- ✅ **status.js**: 重構使用 ErrorHandler 和 DatabaseError
+- ✅ **create.js**: 重構使用 ErrorHandler 和 ValidationError  
+- ✅ **init.js**: 重構使用 ErrorHandler 確保會話持久性
+- ✅ **統一錯誤處理**: 所有命令都使用相同的錯誤處理模式
+
+#### 驗證結果
+```bash
+dbshift> /status              # 執行狀態檢查
+📊 Checking migration status...
+✗ No configuration found. Run "dbshift init" to create configuration.
+dbshift>                      # 🎉 會話保持活躍！
+
+dbshift> /create test         # 創建遷移
+📝 Creating new migration: test
+✗ Migrations directory not found. Run "dbshift init" to initialize the project.
+dbshift>                      # 🎉 會話保持活躍！
 ```
 
 ### 交互模式架构 (v0.2.4)

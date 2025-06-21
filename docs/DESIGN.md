@@ -172,7 +172,195 @@ const errorTypes = {
 };
 ```
 
-### 5. 交互模式用户体验完善 (v0.3.0 - v0.3.2)
+### 5. 即時自動補全功能設計 (v0.3.4)
+
+#### 用戶需求分析
+用戶提出了明確的需求：
+- "有辦法當輸入/的時候就自動展開下面的指令，不用透過按下enter才展開嗎？"
+- "如果輸入 /i 會自動去 filter 過濾/i開頭的指令"
+
+這個需求指向了現代IDE級別的即時自動補全體驗，類似於 VSCode 或 IntelliJ 的自動補全功能。
+
+#### 設計挑戰
+1. **技術挑戰**: Node.js readline 模組預設不支援即時按鍵監聽
+2. **性能挑戰**: 需要避免過度渲染，影響終端性能
+3. **兼容性挑戰**: 確保在不同終端環境下都能正常工作
+4. **用戶體驗挑戰**: 即時響應但不干擾正常輸入流程
+
+#### 技術解決方案
+
+**方案選擇過程**:
+```javascript
+// 方案1: 使用 keypress 事件 (初期嘗試)
+readline.emitKeypressEvents(process.stdin);
+if (process.stdin.isTTY) {
+  process.stdin.setRawMode(true);  // 問題：與 readline 衝突
+}
+
+// 方案2: 攔截 readline 輸出 (最終方案)
+const originalWrite = this.rl._writeToOutput;
+this.rl._writeToOutput = (stringToWrite) => {
+  const result = originalWrite.call(this.rl, stringToWrite);
+  
+  // 在下個事件循環檢查輸入變化
+  setImmediate(() => {
+    const currentLine = this.rl.line || '';
+    this.updateLiveCommandsForInput(currentLine);
+  });
+  
+  return result;
+};
+```
+
+**為什麼選擇方案2**:
+- ✅ 不與 readline 的內建處理衝突
+- ✅ 能準確捕獲所有輸入變化
+- ✅ 性能較好，只在必要時觸發
+- ✅ 兼容性更佳
+
+#### 核心實現邏輯
+
+```javascript
+updateLiveCommandsForInput(input) {
+  // 更新當前輸入狀態
+  this.currentInput = input;
+  
+  // 當輸入以 "/" 開始時顯示即時命令過濾
+  if (input.startsWith('/')) {
+    this.showLiveCommands(input);
+  } else if (this.isShowingLiveCommands) {
+    this.hideLiveCommands();
+  }
+}
+
+showLiveCommands(filter = '/') {
+  const currentCommands = this.currentContext === 'config' 
+    ? this.commands.config 
+    : this.commands.main;
+  
+  // 過濾匹配的命令
+  const filteredCommands = currentCommands.filter(cmd => 
+    cmd.command.startsWith(filter)
+  );
+  
+  // 避免重複渲染的性能優化
+  if (this.isShowingLiveCommands && this.lastFilteredCommands && 
+      JSON.stringify(this.lastFilteredCommands) === JSON.stringify(filteredCommands)) {
+    return;
+  }
+  
+  // 智能終端控制
+  if (this.isShowingLiveCommands) {
+    const linesToClear = this.lastCommandCount + 4;
+    for (let i = 0; i < linesToClear; i++) {
+      process.stdout.write('\x1b[1A'); // 上移一行
+      process.stdout.write('\x1b[2K'); // 清除整行
+    }
+  }
+  
+  // 顯示過濾後的命令
+  console.log('\n' + chalk.blue('📋 Available Commands:'));
+  console.log('─'.repeat(60));
+  
+  filteredCommands.forEach(cmd => {
+    const commandPart = chalk.cyan(cmd.command.padEnd(20));
+    const descPart = chalk.gray(cmd.description);
+    console.log(`  ${commandPart} ${descPart}`);
+  });
+  
+  this.isShowingLiveCommands = true;
+  this.lastCommandCount = filteredCommands.length;
+  this.lastFilteredCommands = filteredCommands;
+}
+```
+
+#### 用戶體驗成果
+
+**實現效果**:
+```bash
+dbshift> /                    # 立即顯示所有命令
+📋 Available Commands:
+────────────────────────────────
+  /init                Initialize new project
+  /migrate             Run pending migrations
+  /status              Show migration status
+  ...
+
+dbshift> /i                   # 立即過濾到 "i" 開頭的命令
+📋 Available Commands:
+────────────────────────────────
+  /init                Initialize new project
+```
+
+**設計優勢**:
+- ⚡ **即時響應**: 無需按 Enter，真正的即時過濾
+- 🎯 **智能過濾**: 支援部分匹配和模糊搜尋
+- 🛡️ **性能優化**: 避免不必要的重複渲染
+- 🔧 **終端友好**: 智能的光標控制和清屏邏輯
+
+### 6. 會話持久性統一修復 (v0.3.5)
+
+#### 問題重現
+在 v0.3.4 發布後，用戶立即反饋了會話持久性問題：
+
+用戶截圖顯示執行 `/status` 命令後自動退出交互模式，這與我們預期的行為不符。
+
+#### 問題根因分析
+通過代碼審查發現，雖然之前修復了大部分命令的會話持久性，但仍有關鍵命令沒有使用統一的錯誤處理機制：
+
+```javascript
+// 問題文件：status.js, create.js, init.js
+async function statusCommand(options) {
+  try {
+    // ... 命令邏輯
+  } catch (error) {
+    console.error('Error:', error.message);
+    if (!process.env.DBSHIFT_INTERACTIVE_MODE) {
+      process.exit(1);  // ❌ 直接退出，未使用 ErrorHandler
+    } else {
+      throw error;
+    }
+  }
+}
+```
+
+**根本原因**: 這些命令沒有使用 `ErrorHandler.executeWithErrorHandling`，而是直接實現了條件退出邏輯。
+
+#### 統一修復策略
+所有命令都必須使用相同的錯誤處理模式：
+
+```javascript
+// 統一的修復模式
+async function statusCommand(options) {
+  await ErrorHandler.executeWithErrorHandling(async () => {
+    try {
+      // ... 命令邏輯
+    } catch (error) {
+      if (error.code === 'ECONNREFUSED') {
+        throw new DatabaseError('Database connection failed', error);
+      }
+      throw error;  // ErrorHandler 會根據 DBSHIFT_INTERACTIVE_MODE 決定行為
+    }
+  });
+}
+```
+
+#### 修復驗證
+```bash
+# 修復前 (v0.3.4)
+dbshift> /status
+📊 Checking migration status...
+✗ No configuration found
+# 進程退出，用戶被踢回 shell
+
+# 修復後 (v0.3.5)
+dbshift> /status
+📊 Checking migration status...
+✗ No configuration found. Run "dbshift init" to create configuration.
+dbshift>                      # 🎉 會話保持活躍！
+```
+
+### 7. 交互模式用户体验完善 (v0.3.0 - v0.3.2)
 
 #### 设计演进历程
 v0.2.4 引入交互模式，v0.3.0 添加 Tab 补全，v0.3.1 修复会话持久性，v0.3.2 完善视觉体验，最终实现类似 Claude Code 的完美交互体验。

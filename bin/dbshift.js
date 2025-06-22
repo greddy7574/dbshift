@@ -571,6 +571,7 @@ MYSQL_PASSWORD=${dbConfig.password}
       const envPath = path.join(process.cwd(), '.env');
       const configPath = path.join(process.cwd(), 'schema.config.js');
 
+      let shouldSetupConfig = true;
       if (fs.existsSync(envPath) || fs.existsSync(configPath)) {
         const { overwrite } = await inquirer.prompt([
           {
@@ -583,32 +584,34 @@ MYSQL_PASSWORD=${dbConfig.password}
 
         if (!overwrite) {
           console.log(chalk.yellow('⚠ Skipping configuration setup'));
-          return;
+          shouldSetupConfig = false;
         }
       }
 
-      // 询问配置偏好
-      const { configType } = await inquirer.prompt([
-        {
-          type: 'list',
-          name: 'configType',
-          message: 'Choose configuration format:',
-          choices: [
-            {
-              name: '.env file (Simple) - Recommended for production deployment',
-              value: 'env'
-            },
-            {
-              name: 'schema.config.js (Advanced) - For multiple environments',
-              value: 'js'
-            }
-          ],
-          default: 'env'
-        }
-      ]);
+      // 只有在需要设置配置时才继续
+      if (shouldSetupConfig) {
+        // 询问配置偏好
+        const { configType } = await inquirer.prompt([
+          {
+            type: 'list',
+            name: 'configType',
+            message: 'Choose configuration format:',
+            choices: [
+              {
+                name: '.env file (Simple) - Recommended for production deployment',
+                value: 'env'
+              },
+              {
+                name: 'schema.config.js (Advanced) - For multiple environments',
+                value: 'js'
+              }
+            ],
+            default: 'env'
+          }
+        ]);
 
-      // 询问数据库连接信息
-      const dbConfig = await inquirer.prompt([
+        // 询问数据库连接信息
+        const dbConfig = await inquirer.prompt([
         {
           type: 'input',
           name: 'host',
@@ -680,6 +683,11 @@ MYSQL_PASSWORD=${dbConfig.password}
         console.log(chalk.gray('💡 Set environment variables for production: MYSQL_HOST, MYSQL_USERNAME, etc.'));
       }
 
+        console.log(chalk.blue('\n🎉 Database configuration initialized successfully!'));
+      } else {
+        console.log(chalk.blue('\n✅ Project structure is ready!'));
+      }
+
       // 创建示例迁移文件
       const exampleMigration = `-- Example migration file
 -- Use this as a template for your migrations
@@ -709,7 +717,6 @@ CREATE INDEX \`idx_users_email\` ON \`users\` (\`email\`);
       fs.writeFileSync(examplePath, exampleMigration);
       console.log(chalk.green(`✓ Created example migration: ${exampleFilename}`));
 
-      console.log(chalk.green('\n🎉 Schema Migration initialized successfully!'));
       console.log(chalk.blue('\nNext steps:'));
       console.log(chalk.gray('  1. Edit your migration files in the migrations/ directory'));
       console.log(chalk.gray('  2. Run "dbshift migrate" to execute pending migrations'));

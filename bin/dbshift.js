@@ -146,8 +146,10 @@ class DBShiftInteractive {
 
 
   async showCommandSelector() {
-    // 暂时关闭当前的 readline 接口
-    this.rl.pause();
+    // 完全移除当前的 readline 监听器，防止与 inquirer 冲突
+    this.rl.removeAllListeners('line');
+    this.rl.removeAllListeners('SIGINT');
+    this.rl.removeAllListeners('close');
 
     let choices;
     if (this.currentContext === 'config') {
@@ -184,29 +186,29 @@ class DBShiftInteractive {
       ]);
 
       if (command === 'cancel') {
-        // 恢复 readline 接口
-        this.rl.resume();
+        // 重新设置监听器并显示提示符
+        this.setupReadlineListeners();
         this.rl.prompt();
         return;
       }
 
       // 处理需要额外输入的命令
       if (command === '/create') {
-        // 不要恢复 readline，让 handleCreateCommand 处理
+        // 让 handleCreateCommand 处理，它会重新创建接口
         await this.handleCreateCommand();
         return;
       }
 
-      // 恢复 readline 接口
-      this.rl.resume();
+      // 重新设置监听器
+      this.setupReadlineListeners();
       
       // 处理其他选择的命令  
       await this.handleInput(command);
       
       // handleInput 已经会显示提示符，不需要重复调用
     } catch (error) {
-      // 恢复 readline 接口
-      this.rl.resume();
+      // 重新设置监听器
+      this.setupReadlineListeners();
       console.error(chalk.red('❌ Error:'), error.message);
       this.rl.prompt();
     }

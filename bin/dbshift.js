@@ -98,6 +98,11 @@ class DBShiftInteractive {
   }
 
   setupReadlineListeners() {
+    // 清除现有监听器，避免重复绑定
+    this.rl.removeAllListeners('SIGINT');
+    this.rl.removeAllListeners('line');
+    this.rl.removeAllListeners('close');
+    
     // 使用 readline 的內建事件來監聽輸入變化
     this.rl.on('SIGINT', () => {
       console.log(chalk.yellow('\nGoodbye! 👋'));
@@ -112,6 +117,29 @@ class DBShiftInteractive {
       console.log(chalk.yellow('\nGoodbye! 👋'));
       process.exit(0);
     });
+  }
+
+  // 重新创建 readline 接口来恢复所有功能，包括 Tab 补全
+  recreateReadlineInterface() {
+    // 保存当前的提示符位置
+    const currentPrompt = this.rl.getPrompt();
+    
+    // 关闭当前接口
+    this.rl.close();
+    
+    // 重新创建接口，恢复所有功能包括 completer
+    this.rl = readline.createInterface({
+      input: process.stdin,
+      output: process.stdout,
+      prompt: chalk.blue('dbshift> '),
+      completer: this.completer.bind(this)
+    });
+    
+    // 重新设置监听器
+    this.setupReadlineListeners();
+    
+    // 恢复提示符
+    this.rl.prompt();
   }
 
 
@@ -332,9 +360,8 @@ CREATE TABLE IF NOT EXISTS \`your_table_name\` (
     } catch (error) {
       throw error;
     } finally {
-      // 恢复 readline 接口和监听器
-      this.rl.resume();
-      this.setupReadlineListeners();
+      // 重新创建 readline 接口以恢复所有功能，包括 Tab 补全
+      this.recreateReadlineInterface();
     }
   }
 
@@ -548,9 +575,8 @@ MYSQL_PASSWORD=${dbConfig.password}
     } catch (error) {
       throw error;
     } finally {
-      // 恢复 readline 接口和监听器
-      this.rl.resume();
-      this.setupReadlineListeners();
+      // 重新创建 readline 接口以恢复所有功能，包括 Tab 补全
+      this.recreateReadlineInterface();
     }
   }
 
@@ -732,9 +758,8 @@ CREATE INDEX \`idx_users_email\` ON \`users\` (\`email\`);
     } catch (error) {
       throw error;
     } finally {
-      // 恢复 readline 接口和监听器
-      this.rl.resume();
-      this.setupReadlineListeners();
+      // 重新创建 readline 接口以恢复所有功能，包括 Tab 补全
+      this.recreateReadlineInterface();
     }
   }
 

@@ -1066,6 +1066,19 @@ CREATE INDEX \`idx_users_email\` ON \`users\` (\`email\`);
 // 设置交互模式标志
 process.env.DBSHIFT_INTERACTIVE_MODE = 'true';
 
+// 添加全局错误处理器，防止未捕获的异常导致进程退出
+process.on('uncaughtException', (error) => {
+  console.error(chalk.red('❌ Uncaught Exception:'), error.message);
+  console.error(chalk.gray('💡 This is likely a bug. Please report it at https://github.com/greddy7574/dbshift/issues'));
+  // 在交互模式下不退出，让用户继续操作
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error(chalk.red('❌ Unhandled Promise Rejection:'), reason);
+  console.error(chalk.gray('💡 This is likely a bug. Please report it at https://github.com/greddy7574/dbshift/issues'));
+  // 在交互模式下不退出，让用户继续操作
+});
+
 // 启动交互模式
 const interactive = new DBShiftInteractive();
 interactive.start();

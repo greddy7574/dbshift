@@ -183,22 +183,27 @@ class DBShiftInteractive {
         }
       ]);
 
-      // 恢复 readline 接口
-      this.rl.resume();
-
       if (command === 'cancel') {
+        // 恢复 readline 接口
+        this.rl.resume();
         this.rl.prompt();
         return;
       }
 
       // 处理需要额外输入的命令
       if (command === '/create') {
+        // 不要恢复 readline，让 handleCreateCommand 处理
         await this.handleCreateCommand();
         return;
       }
 
-      // 处理其他选择的命令
+      // 恢复 readline 接口
+      this.rl.resume();
+      
+      // 处理其他选择的命令  
       await this.handleInput(command);
+      
+      // handleInput 已经会显示提示符，不需要重复调用
     } catch (error) {
       // 恢复 readline 接口
       this.rl.resume();

@@ -145,72 +145,70 @@ class DBShiftInteractive {
   }
 
 
-  async showCommandSelector() {
-    // 完全移除当前的 readline 监听器，防止与 inquirer 冲突
-    this.rl.removeAllListeners('line');
-    this.rl.removeAllListeners('SIGINT');
-    this.rl.removeAllListeners('close');
-
+  showCommandSelector() {
     let choices;
     if (this.currentContext === 'config') {
       choices = [
-        { name: '/config show         Show current configuration', value: '/config show' },
-        { name: '/config init         Interactive configuration setup', value: '/config init' },
-        { name: '/config set          Set configuration values', value: '/config set' },
-        { name: '/back                Back to main menu', value: '/back' },
-        { name: 'Cancel                Exit menu', value: 'cancel' }
+        { command: '/config show', description: 'Show current configuration' },
+        { command: '/config init', description: 'Interactive configuration setup' },
+        { command: '/config set', description: 'Set configuration values' },
+        { command: '/back', description: 'Back to main menu' }
       ];
     } else {
       choices = [
-        { name: '/init                Initialize new project', value: '/init' },
-        { name: '/migrate             Run pending migrations', value: '/migrate' },
-        { name: '/status              Show migration status', value: '/status' },
-        { name: '/create              Create new migration', value: '/create', needsInput: true },
-        { name: '/config              Configuration management', value: '/config' },
-        { name: '/ping                Test database connection', value: '/ping' },
-        { name: '/clear               Clear screen', value: '/clear' },
-        { name: '/help                Show help menu', value: '/help' },
-        { name: 'Cancel                Exit menu', value: 'cancel' }
+        { command: '/init', description: 'Initialize new project' },
+        { command: '/migrate', description: 'Run pending migrations' },
+        { command: '/status', description: 'Show migration status' },
+        { command: '/create', description: 'Create new migration' },
+        { command: '/config', description: 'Configuration management' },
+        { command: '/ping', description: 'Test database connection' },
+        { command: '/clear', description: 'Clear screen' },
+        { command: '/help', description: 'Show help menu' }
       ];
     }
 
-    try {
-      const { command } = await inquirer.prompt([
-        {
-          type: 'list',
-          name: 'command',
-          message: 'Select a command:',
-          choices: choices,
-          pageSize: 10
-        }
-      ]);
+    console.log(chalk.cyan('\n📋 Available Commands:'));
+    console.log('─'.repeat(60));
+    
+    choices.forEach((choice, index) => {
+      console.log(`${chalk.yellow((index + 1).toString().padStart(2))}. ${chalk.cyan(choice.command.padEnd(20))} ${chalk.gray(choice.description)}`);
+    });
+    console.log(`${chalk.yellow((choices.length + 1).toString().padStart(2))}. ${chalk.cyan('Cancel'.padEnd(20))} ${chalk.gray('Exit menu')}`);
+    
+    console.log('─'.repeat(60));
+    console.log(chalk.blue('💡 Enter a number (1-' + (choices.length + 1) + ') or type a command directly:'));
+    
+    this.rl.prompt();
+  }
 
-      if (command === 'cancel') {
-        // 重新设置监听器并显示提示符
-        this.setupReadlineListeners();
-        this.rl.prompt();
-        return;
-      }
+  handleNumberChoice(number) {
+    let choices;
+    if (this.currentContext === 'config') {
+      choices = [
+        '/config show',
+        '/config init', 
+        '/config set',
+        '/back'
+      ];
+    } else {
+      choices = [
+        '/init',
+        '/migrate',
+        '/status',
+        '/create',
+        '/config',
+        '/ping',
+        '/clear',
+        '/help'
+      ];
+    }
 
-      // 处理需要额外输入的命令
-      if (command === '/create') {
-        // 让 handleCreateCommand 处理，它会重新创建接口
-        await this.handleCreateCommand();
-        return;
-      }
-
-      // 重新设置监听器
-      this.setupReadlineListeners();
-      
-      // 处理其他选择的命令  
-      await this.handleInput(command);
-      
-      // handleInput 已经会显示提示符，不需要重复调用
-    } catch (error) {
-      // 重新设置监听器
-      this.setupReadlineListeners();
-      console.error(chalk.red('❌ Error:'), error.message);
-      this.rl.prompt();
+    if (number >= 1 && number <= choices.length) {
+      return choices[number - 1];
+    } else if (number === choices.length + 1) {
+      return null; // Cancel
+    } else {
+      return false; // Invalid choice
     }
   }
 
@@ -863,7 +861,7 @@ CREATE INDEX \`idx_users_email\` ON \`users\` (\`email\`);
       // 处理菜单命令
       if (input === '/') {
         // 显示交互式命令选择器
-        await this.showCommandSelector();
+        this.showCommandSelector();
         return;
       }
 
@@ -888,6 +886,20 @@ CREATE INDEX \`idx_users_email\` ON \`users\` (\`email\`);
       if (!input) {
         this.rl.prompt();
         return;
+      }
+
+      // 处理数字选择（从命令选择器）
+      if (/^\d+$/.test(input)) {
+        const choice = this.handleNumberChoice(parseInt(input));
+        if (choice) {
+          // 递归调用 handleInput 处理选择的命令
+          await this.handleInput(choice);
+          return;
+        } else {
+          console.log(chalk.yellow('❓ Invalid choice. Please try again.'));
+          this.rl.prompt();
+          return;
+        }
       }
 
       // 解析命令和参数

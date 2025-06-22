@@ -17,7 +17,9 @@ describe('ConnectionTester', () => {
     mockDatabase = {
       connect: jest.fn(),
       disconnect: jest.fn(),
-      query: jest.fn()
+      connection: {
+        query: jest.fn()
+      }
     };
     
     Database.mockImplementation(() => mockDatabase);
@@ -30,9 +32,9 @@ describe('ConnectionTester', () => {
   describe('testConnection', () => {
     test('should successfully test connection', async () => {
       // Setup mocks
-      mockDatabase.query
-        .mockResolvedValueOnce([{ test_connection: 1, mysql_version: '8.0.28' }])
-        .mockResolvedValueOnce([{ server_comment: 'MySQL Community Server' }]);
+      mockDatabase.connection.query
+        .mockResolvedValueOnce([[{ test_connection: 1, mysql_version: '8.0.28' }]])
+        .mockResolvedValueOnce([[{ server_comment: 'MySQL Community Server' }]]);
 
       const dbConfig = {
         host: 'localhost',
@@ -52,7 +54,7 @@ describe('ConnectionTester', () => {
       
       expect(mockDatabase.connect).toHaveBeenCalledTimes(1);
       expect(mockDatabase.disconnect).toHaveBeenCalledTimes(1);
-      expect(mockDatabase.query).toHaveBeenCalledTimes(2);
+      expect(mockDatabase.connection.query).toHaveBeenCalledTimes(2);
     });
 
     test('should handle connection failure', async () => {
@@ -73,19 +75,21 @@ describe('ConnectionTester', () => {
 
     test('should test migration table when requested', async () => {
       // Setup basic connection mocks
-      mockDatabase.query
-        .mockResolvedValueOnce([{ test_connection: 1, mysql_version: '8.0.28' }])
-        .mockResolvedValueOnce([{ server_comment: 'MySQL Community Server' }]);
+      mockDatabase.connection.query
+        .mockResolvedValueOnce([[{ test_connection: 1, mysql_version: '8.0.28' }]])
+        .mockResolvedValueOnce([[{ server_comment: 'MySQL Community Server' }]]);
 
       // Setup migration table test mocks
       const mockMigrationTableQuery = jest.fn()
-        .mockResolvedValueOnce([{ count: 1 }]) // table exists
-        .mockResolvedValueOnce([{ total_migrations: 5, completed_migrations: 3, pending_migrations: 2 }]);
+        .mockResolvedValueOnce([[{ count: 1 }]]) // table exists
+        .mockResolvedValueOnce([[{ total_migrations: 5, completed_migrations: 3, pending_migrations: 2 }]]);
 
       const mockMigrationDatabase = {
         connect: jest.fn(),
         disconnect: jest.fn(),
-        query: mockMigrationTableQuery
+        connection: {
+          query: mockMigrationTableQuery
+        }
       };
 
       // Mock Database constructor to return different instances
@@ -119,7 +123,7 @@ describe('ConnectionTester', () => {
 
   describe('testMigrationTableAccess', () => {
     test('should handle non-existent migration table', async () => {
-      mockDatabase.query.mockResolvedValueOnce([{ count: 0 }]); // table doesn't exist
+      mockDatabase.connection.query.mockResolvedValueOnce([[{ count: 0 }]]); // table doesn't exist
 
       const dbConfig = { host: 'localhost', user: 'root' };
       const result = await ConnectionTester.testMigrationTableAccess(dbConfig, false);
@@ -131,13 +135,13 @@ describe('ConnectionTester', () => {
     });
 
     test('should get migration statistics when table exists', async () => {
-      mockDatabase.query
-        .mockResolvedValueOnce([{ count: 1 }]) // table exists
-        .mockResolvedValueOnce([{ 
+      mockDatabase.connection.query
+        .mockResolvedValueOnce([[{ count: 1 }]]) // table exists
+        .mockResolvedValueOnce([[{ 
           total_migrations: 10, 
           completed_migrations: 8, 
           pending_migrations: 2 
-        }]);
+        }]]);
 
       const dbConfig = { host: 'localhost', user: 'root' };
       const result = await ConnectionTester.testMigrationTableAccess(dbConfig, false);

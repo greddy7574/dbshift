@@ -121,10 +121,12 @@ class DBShiftInteractive {
 
   // 重新创建 readline 接口来恢复所有功能，包括 Tab 补全
   recreateReadlineInterface() {
-    // 保存当前的提示符位置
-    const currentPrompt = this.rl.getPrompt();
+    // 先移除所有现有监听器，避免触发 close 事件
+    this.rl.removeAllListeners('close');
+    this.rl.removeAllListeners('SIGINT');
+    this.rl.removeAllListeners('line');
     
-    // 关闭当前接口
+    // 关闭当前接口（现在不会触发退出）
     this.rl.close();
     
     // 重新创建接口，恢复所有功能包括 completer
@@ -721,8 +723,36 @@ MYSQL_PASSWORD=${dbConfig.password}
         console.log(chalk.blue('\n✅ Project structure is ready!'));
       }
 
-      // 创建示例迁移文件
-      const exampleMigration = `-- Example migration file
+      // 询问是否创建示例迁移文件
+      const exampleFilename = `${new Date().getFullYear()}${(new Date().getMonth() + 1).toString().padStart(2, '0')}${new Date().getDate().toString().padStart(2, '0')}01_Admin_example_migration.sql`;
+      const examplePath = path.join(migrationsDir, exampleFilename);
+      
+      let shouldCreateExample = true;
+      if (fs.existsSync(examplePath)) {
+        const { createExample } = await inquirer.prompt([
+          {
+            type: 'confirm',
+            name: 'createExample',
+            message: `Example migration file already exists (${exampleFilename}). Overwrite?`,
+            default: false
+          }
+        ]);
+        shouldCreateExample = createExample;
+      } else {
+        const { createExample } = await inquirer.prompt([
+          {
+            type: 'confirm',
+            name: 'createExample',
+            message: 'Create example migration file?',
+            default: true
+          }
+        ]);
+        shouldCreateExample = createExample;
+      }
+
+      if (shouldCreateExample) {
+        // 创建示例迁移文件
+        const exampleMigration = `-- Example migration file
 -- Use this as a template for your migrations
 
 -- Create database if it doesn't exist
@@ -747,8 +777,11 @@ CREATE INDEX \`idx_users_email\` ON \`users\` (\`email\`);
       const exampleFilename = `${new Date().getFullYear()}${(new Date().getMonth() + 1).toString().padStart(2, '0')}${new Date().getDate().toString().padStart(2, '0')}01_Admin_example_migration.sql`;
       const examplePath = path.join(migrationsDir, exampleFilename);
 
-      fs.writeFileSync(examplePath, exampleMigration);
-      console.log(chalk.green(`✓ Created example migration: ${exampleFilename}`));
+        fs.writeFileSync(examplePath, exampleMigration);
+        console.log(chalk.green(`✓ Created example migration: ${exampleFilename}`));
+      } else {
+        console.log(chalk.yellow('⚠ Skipping example migration file creation'));
+      }
 
       console.log(chalk.blue('\nNext steps:'));
       console.log(chalk.gray('  1. Edit your migration files in the migrations/ directory'));

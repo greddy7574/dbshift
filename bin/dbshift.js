@@ -198,12 +198,528 @@ class DBShiftInteractive {
         }
       ]);
 
-      const command = `/create ${answers.migrationName} --author=${answers.author}`;
       console.log(chalk.blue(`📝 Creating migration: ${answers.migrationName}`));
-      await this.handleInput(command);
+      await this.handleCreateMigration(answers.migrationName, answers.author);
     } catch (error) {
       console.error(chalk.red('❌ Error:'), error.message);
       this.rl.prompt();
+    }
+  }
+
+  async handleCreateMigration(migrationName, author) {
+    const fs = require('fs');
+    const path = require('path');
+    
+    // 暂停 readline 接口
+    this.rl.pause();
+    
+    try {
+      // 检查 migrations 目录
+      const migrationsDir = path.join(process.cwd(), 'migrations');
+      if (!fs.existsSync(migrationsDir)) {
+        throw new Error('Migrations directory not found. Run "dbshift init" to initialize the project.');
+      }
+
+      // 选择迁移类型
+      const { migrationType } = await inquirer.prompt([
+        {
+          type: 'list',
+          name: 'migrationType',
+          message: 'Choose migration type:',
+          choices: [
+            { name: 'Create Table', value: 'create_table' },
+            { name: 'Alter Table', value: 'alter_table' },
+            { name: 'Insert Data', value: 'insert_data' },
+            { name: 'Create Index', value: 'create_index' },
+            { name: 'Custom SQL', value: 'custom' }
+          ]
+        }
+      ]);
+
+      // 生成版本号
+      const now = new Date();
+      const dateStr = now.getFullYear().toString() +
+        (now.getMonth() + 1).toString().padStart(2, '0') +
+        now.getDate().toString().padStart(2, '0');
+
+      // 按作者生成独立的序号
+      const FileUtils = require('../lib/utils/fileUtils');
+      const sequence = FileUtils.generateSequence(migrationsDir, dateStr, author);
+
+      const version = dateStr + sequence;
+      const sanitizedName = migrationName.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
+      const filename = `${version}_${author}_${sanitizedName}.sql`;
+      const filePath = path.join(migrationsDir, filename);
+
+      // 检查文件是否已存在
+      if (fs.existsSync(filePath)) {
+        throw new Error(`Migration file already exists: ${filename}`);
+      }
+
+      // 生成模板内容
+      let template = `-- Migration: ${migrationName}
+-- Author: ${author}
+-- Created: ${now.toISOString().split('T')[0]}
+-- Version: ${version}
+
+-- Use the database
+USE \`my_app\`;
+
+`;
+
+      switch (migrationType) {
+        case 'create_table':
+          template += `-- Create new table
+CREATE TABLE IF NOT EXISTS \`your_table_name\` (
+  \`id\` BIGINT AUTO_INCREMENT PRIMARY KEY,
+  \`name\` VARCHAR(255) NOT NULL,
+  \`created_at\` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  \`updated_at\` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+`;
+          break;
+
+        case 'alter_table':
+          template += `-- Alter existing table
+-- ALTER TABLE \`your_table_name\` ADD COLUMN \`new_column\` VARCHAR(255);
+-- ALTER TABLE \`your_table_name\` DROP COLUMN \`old_column\`;
+-- ALTER TABLE \`your_table_name\` MODIFY COLUMN \`existing_column\` TEXT;
+`;
+          break;
+
+        case 'insert_data':
+          template += `-- Insert initial data
+-- INSERT INTO \`your_table_name\` (\`column1\`, \`column2\`) VALUES
+--   ('value1', 'value2'),
+--   ('value3', 'value4');
+`;
+          break;
+
+        case 'create_index':
+          template += `-- Create indexes
+-- CREATE INDEX \`idx_column_name\` ON \`your_table_name\` (\`column_name\`);
+-- CREATE UNIQUE INDEX \`idx_unique_column\` ON \`your_table_name\` (\`unique_column\`);
+`;
+          break;
+
+        default:
+          template += `-- Add your custom SQL here
+-- Remember to test your SQL before running migration
+
+`;
+      }
+
+      template += `
+-- Example:
+-- CREATE TABLE test1 (id INT);
+-- CREATE TABLE test2 (id INT);
+`;
+
+      // 写入文件
+      fs.writeFileSync(filePath, template);
+
+      console.log(chalk.green(`✓ Created migration file: ${filename}`));
+      console.log(chalk.gray(`   Path: ${filePath}`));
+      console.log(chalk.blue('\n📝 Next steps:'));
+      console.log(chalk.gray('  1. Edit the migration file with your SQL'));
+      console.log(chalk.gray('  2. Run "dbshift migrate" to execute the migration'));
+
+    } catch (error) {
+      throw error;
+    } finally {
+      // 恢复 readline 接口
+      this.rl.resume();
+    }
+  }
+
+  async handleConfigInit(env = 'development') {
+    const fs = require('fs');
+    const path = require('path');
+    
+    // 暂停 readline 接口
+    this.rl.pause();
+    
+    try {
+      console.log(chalk.blue('⚙️  Initializing database configuration...'));
+
+      const envPath = path.join(process.cwd(), '.env');
+      const configPath = path.join(process.cwd(), 'schema.config.js');
+      
+      // 检查现有配置
+      let currentConfig = {};
+      let configExists = false;
+      let configType = 'env';
+
+      if (fs.existsSync(configPath)) {
+        configExists = true;
+        configType = 'js';
+        try {
+          const configModule = require(configPath);
+          currentConfig = configModule[env] || configModule.default || configModule;
+        } catch (error) {
+          console.warn(chalk.yellow('⚠ Failed to load existing config:', error.message));
+        }
+      } else if (fs.existsSync(envPath)) {
+        configExists = true;
+        configType = 'env';
+        // 读取现有 .env 文件
+        const envContent = fs.readFileSync(envPath, 'utf8');
+        const envLines = envContent.split('\n');
+        envLines.forEach(line => {
+          const [key, value] = line.split('=', 2);
+          if (key && value) {
+            switch (key.trim()) {
+              case 'MYSQL_HOST': currentConfig.host = value.trim(); break;
+              case 'MYSQL_PORT': currentConfig.port = value.trim(); break;
+              case 'MYSQL_USERNAME': currentConfig.user = value.trim(); break;
+              case 'MYSQL_PASSWORD': currentConfig.password = value.trim(); break;
+            }
+          }
+        });
+      }
+
+      if (configExists) {
+        console.log(chalk.green(`✓ Found existing ${configType === 'js' ? 'schema.config.js' : '.env'} configuration`));
+        
+        if (currentConfig.host) {
+          console.log(chalk.gray(`  Host: ${currentConfig.host}:${currentConfig.port || 3306}`));
+          console.log(chalk.gray(`  User: ${currentConfig.user || 'root'}`));
+        }
+      }
+
+      // 询问是否要更新配置
+      if (configExists) {
+        const { shouldUpdate } = await inquirer.prompt([
+          {
+            type: 'confirm',
+            name: 'shouldUpdate',
+            message: 'Configuration already exists. Update it?',
+            default: false
+          }
+        ]);
+        
+        if (!shouldUpdate) {
+          console.log(chalk.yellow('⚠ Configuration update cancelled'));
+          return;
+        }
+      }
+
+      // 询问配置类型（如果是新配置）
+      if (!configExists) {
+        const { newConfigType } = await inquirer.prompt([
+          {
+            type: 'list',
+            name: 'newConfigType',
+            message: 'Choose configuration format:',
+            choices: [
+              { 
+                name: '.env file (Simple) - Recommended for production deployment', 
+                value: 'env' 
+              },
+              { 
+                name: 'schema.config.js (Advanced) - For multiple environments', 
+                value: 'js' 
+              }
+            ],
+            default: 'env'
+          }
+        ]);
+        configType = newConfigType;
+      }
+
+      // 询问数据库连接信息
+      const dbConfig = await inquirer.prompt([
+        {
+          type: 'input',
+          name: 'host',
+          message: 'Database host:',
+          default: currentConfig.host || 'localhost'
+        },
+        {
+          type: 'input',
+          name: 'port',
+          message: 'Database port:',
+          default: currentConfig.port || '3306'
+        },
+        {
+          type: 'input',
+          name: 'username',
+          message: 'Database username:',
+          default: currentConfig.user || 'root'
+        },
+        {
+          type: 'password',
+          name: 'password',
+          message: 'Database password:',
+          default: currentConfig.password || ''
+        }
+      ]);
+
+      // 测试连接
+      const { testConnection } = await inquirer.prompt([
+        {
+          type: 'confirm',
+          name: 'testConnection',
+          message: 'Test database connection?',
+          default: true
+        }
+      ]);
+
+      if (testConnection) {
+        try {
+          const ConnectionTester = require('../lib/utils/connectionTester');
+          await ConnectionTester.testConnection({
+            host: dbConfig.host,
+            user: dbConfig.username,
+            port: dbConfig.port,
+            password: dbConfig.password
+          }, { verbose: true, testMigrationTable: false });
+          
+        } catch (error) {
+          const { continueAnyway } = await inquirer.prompt([
+            {
+              type: 'confirm',
+              name: 'continueAnyway',
+              message: 'Save configuration anyway?',
+              default: false
+            }
+          ]);
+          
+          if (!continueAnyway) {
+            console.log(chalk.yellow('Configuration cancelled'));
+            return;
+          }
+        }
+      }
+
+      // 保存配置
+      if (configType === 'env') {
+        const envContent = `### MySQL Database Configuration
+MYSQL_HOST=${dbConfig.host}
+MYSQL_PORT=${dbConfig.port}
+MYSQL_USERNAME=${dbConfig.username}
+MYSQL_PASSWORD=${dbConfig.password}
+
+# For production deployment, override these with environment variables:
+# export MYSQL_HOST=your-prod-host
+# export MYSQL_USERNAME=your-prod-user
+# export MYSQL_PASSWORD=your-prod-password
+`;
+        fs.writeFileSync(envPath, envContent);
+        console.log(chalk.green('✓ Created .env configuration file'));
+        console.log(chalk.gray('💡 For production, use environment variables to override .env values'));
+      } else {
+        const configContent = `module.exports = {
+  development: {
+    host: '${dbConfig.host}',
+    port: ${dbConfig.port},
+    user: '${dbConfig.username}',
+    password: '${dbConfig.password}'
+  },
+  
+  staging: {
+    host: '${dbConfig.host}',
+    port: ${dbConfig.port},
+    user: '${dbConfig.username}',
+    password: '${dbConfig.password}'
+  },
+  
+  production: {
+    host: process.env.MYSQL_HOST || '${dbConfig.host}',
+    port: process.env.MYSQL_PORT || ${dbConfig.port},
+    user: process.env.MYSQL_USERNAME || '${dbConfig.username}',
+    password: process.env.MYSQL_PASSWORD || '${dbConfig.password}'
+  }
+};
+`;
+        fs.writeFileSync(configPath, configContent);
+        console.log(chalk.green('✓ Created schema.config.js configuration file'));
+        console.log(chalk.gray('💡 Use "dbshift migrate -e production" to run with production config'));
+        console.log(chalk.gray('💡 Set environment variables for production: MYSQL_HOST, MYSQL_USERNAME, etc.'));
+      }
+
+      console.log(chalk.blue('\n🎉 Database configuration initialized successfully!'));
+
+    } catch (error) {
+      throw error;
+    } finally {
+      // 恢复 readline 接口
+      this.rl.resume();
+    }
+  }
+
+  async handleInitCommand() {
+    const fs = require('fs');
+    const path = require('path');
+    
+    // 暂停 readline 接口
+    this.rl.pause();
+    
+    try {
+      console.log(chalk.blue('🚀 Initializing Schema Migration in current directory...'));
+
+      // 创建 migrations 目录
+      const migrationsDir = path.join(process.cwd(), 'migrations');
+      if (!fs.existsSync(migrationsDir)) {
+        fs.mkdirSync(migrationsDir, { recursive: true });
+        console.log(chalk.green('✓ Created migrations/ directory'));
+      } else {
+        console.log(chalk.yellow('⚠ migrations/ directory already exists'));
+      }
+
+      // 检查是否已有配置文件
+      const envPath = path.join(process.cwd(), '.env');
+      const configPath = path.join(process.cwd(), 'schema.config.js');
+
+      if (fs.existsSync(envPath) || fs.existsSync(configPath)) {
+        const { overwrite } = await inquirer.prompt([
+          {
+            type: 'confirm',
+            name: 'overwrite',
+            message: 'Configuration file already exists. Overwrite?',
+            default: false
+          }
+        ]);
+
+        if (!overwrite) {
+          console.log(chalk.yellow('⚠ Skipping configuration setup'));
+          return;
+        }
+      }
+
+      // 询问配置偏好
+      const { configType } = await inquirer.prompt([
+        {
+          type: 'list',
+          name: 'configType',
+          message: 'Choose configuration format:',
+          choices: [
+            {
+              name: '.env file (Simple) - Recommended for production deployment',
+              value: 'env'
+            },
+            {
+              name: 'schema.config.js (Advanced) - For multiple environments',
+              value: 'js'
+            }
+          ],
+          default: 'env'
+        }
+      ]);
+
+      // 询问数据库连接信息
+      const dbConfig = await inquirer.prompt([
+        {
+          type: 'input',
+          name: 'host',
+          message: 'Database host:',
+          default: 'localhost'
+        },
+        {
+          type: 'input',
+          name: 'port',
+          message: 'Database port:',
+          default: '3306'
+        },
+        {
+          type: 'input',
+          name: 'username',
+          message: 'Database username:',
+          default: 'root'
+        },
+        {
+          type: 'password',
+          name: 'password',
+          message: 'Database password:'
+        }
+      ]);
+
+      // 创建配置文件
+      if (configType === 'env') {
+        const envContent = `### MySQL Database Configuration
+MYSQL_HOST=${dbConfig.host}
+MYSQL_PORT=${dbConfig.port}
+MYSQL_USERNAME=${dbConfig.username}
+MYSQL_PASSWORD=${dbConfig.password}
+
+# For production deployment, override these with environment variables:
+# export MYSQL_HOST=your-prod-host
+# export MYSQL_USERNAME=your-prod-user
+# export MYSQL_PASSWORD=your-prod-password
+`;
+        fs.writeFileSync(envPath, envContent);
+        console.log(chalk.green('✓ Created .env configuration file'));
+        console.log(chalk.gray('💡 For production, use environment variables to override .env values'));
+      } else {
+        const configContent = `module.exports = {
+  development: {
+    host: '${dbConfig.host}',
+    port: ${dbConfig.port},
+    user: '${dbConfig.username}',
+    password: '${dbConfig.password}'
+  },
+  
+  staging: {
+    host: '${dbConfig.host}',
+    port: ${dbConfig.port},
+    user: '${dbConfig.username}',
+    password: '${dbConfig.password}'
+  },
+  
+  production: {
+    host: process.env.MYSQL_HOST || '${dbConfig.host}',
+    port: process.env.MYSQL_PORT || ${dbConfig.port},
+    user: process.env.MYSQL_USERNAME || '${dbConfig.username}',
+    password: process.env.MYSQL_PASSWORD || '${dbConfig.password}'
+  }
+};
+`;
+        fs.writeFileSync(configPath, configContent);
+        console.log(chalk.green('✓ Created schema.config.js configuration file'));
+        console.log(chalk.gray('💡 Use "dbshift migrate -e production" to run with production config'));
+        console.log(chalk.gray('💡 Set environment variables for production: MYSQL_HOST, MYSQL_USERNAME, etc.'));
+      }
+
+      // 创建示例迁移文件
+      const exampleMigration = `-- Example migration file
+-- Use this as a template for your migrations
+
+-- Create database if it doesn't exist
+CREATE DATABASE IF NOT EXISTS \`my_app\` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- Use the database
+USE \`my_app\`;
+
+-- Create users table
+CREATE TABLE IF NOT EXISTS \`users\` (
+  \`id\` BIGINT AUTO_INCREMENT PRIMARY KEY,
+  \`username\` VARCHAR(50) NOT NULL UNIQUE,
+  \`email\` VARCHAR(100) NOT NULL UNIQUE,
+  \`created_at\` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  \`updated_at\` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Add index for better performance
+CREATE INDEX \`idx_users_email\` ON \`users\` (\`email\`);
+`;
+
+      const exampleFilename = `${new Date().getFullYear()}${(new Date().getMonth() + 1).toString().padStart(2, '0')}${new Date().getDate().toString().padStart(2, '0')}01_Admin_example_migration.sql`;
+      const examplePath = path.join(migrationsDir, exampleFilename);
+
+      fs.writeFileSync(examplePath, exampleMigration);
+      console.log(chalk.green(`✓ Created example migration: ${exampleFilename}`));
+
+      console.log(chalk.green('\n🎉 Schema Migration initialized successfully!'));
+      console.log(chalk.blue('\nNext steps:'));
+      console.log(chalk.gray('  1. Edit your migration files in the migrations/ directory'));
+      console.log(chalk.gray('  2. Run "dbshift migrate" to execute pending migrations'));
+      console.log(chalk.gray('  3. Use "dbshift create <name>" to create new migration files'));
+
+    } catch (error) {
+      throw error;
+    } finally {
+      // 恢复 readline 接口
+      this.rl.resume();
     }
   }
 
@@ -314,15 +830,10 @@ class DBShiftInteractive {
       case '/init':
         console.log(chalk.blue('🚀 Initializing new project...'));
         try {
-          // 暂停当前 readline 接口，让 init 命令的 inquirer 接管
-          this.rl.pause();
-          await initCommand();
+          await this.handleInitCommand();
           console.log(chalk.green('✅ Project initialized successfully!'));
         } catch (error) {
           console.error(chalk.red('❌ Failed to initialize project:'), error.message);
-        } finally {
-          // 恢复 readline 接口
-          this.rl.resume();
         }
         break;
 
@@ -353,18 +864,15 @@ class DBShiftInteractive {
           break;
         }
         try {
-          // 暂停当前 readline 接口
-          this.rl.pause();
           const migrationName = args[0];
           const author = this.parseAuthorFromArgs(args);
           console.log(chalk.blue(`📝 Creating migration: ${migrationName}`));
-          await createCommand(migrationName, { author });
+          
+          // 在交互模式中直接处理迁移类型选择，避免嵌套 inquirer
+          await this.handleCreateMigration(migrationName, author);
           console.log(chalk.green('✅ Migration file created successfully!'));
         } catch (error) {
           console.error(chalk.red('❌ Failed to create migration:'), error.message);
-        } finally {
-          // 恢复 readline 接口
-          this.rl.resume();
         }
         break;
 
@@ -419,16 +927,11 @@ class DBShiftInteractive {
 
       case 'init':
         try {
-          // 暂停当前 readline 接口
-          this.rl.pause();
           const initEnv = this.parseEnvFromArgs(restArgs);
-          await configInitCommand({ env: initEnv });
+          await this.handleConfigInit(initEnv);
           console.log(chalk.green('✅ Configuration initialized successfully!'));
         } catch (error) {
           console.error(chalk.red('❌ Failed to initialize configuration:'), error.message);
-        } finally {
-          // 恢复 readline 接口
-          this.rl.resume();
         }
         break;
 

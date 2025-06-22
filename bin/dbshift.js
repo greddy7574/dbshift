@@ -94,6 +94,10 @@ class DBShiftInteractive {
   }
 
   setupReadline() {
+    this.setupReadlineListeners();
+  }
+
+  setupReadlineListeners() {
     // 使用 readline 的內建事件來監聽輸入變化
     this.rl.on('SIGINT', () => {
       console.log(chalk.yellow('\nGoodbye! 👋'));
@@ -210,8 +214,9 @@ class DBShiftInteractive {
     const fs = require('fs');
     const path = require('path');
     
-    // 暂停 readline 接口
+    // 完全关闭 readline 输入监听，让 inquirer 完全接管
     this.rl.pause();
+    this.rl.removeAllListeners('line');
     
     try {
       // 检查 migrations 目录
@@ -327,8 +332,9 @@ CREATE TABLE IF NOT EXISTS \`your_table_name\` (
     } catch (error) {
       throw error;
     } finally {
-      // 恢复 readline 接口
+      // 恢复 readline 接口和监听器
       this.rl.resume();
+      this.setupReadlineListeners();
     }
   }
 
@@ -336,8 +342,9 @@ CREATE TABLE IF NOT EXISTS \`your_table_name\` (
     const fs = require('fs');
     const path = require('path');
     
-    // 暂停 readline 接口
+    // 完全关闭 readline 输入监听，让 inquirer 完全接管
     this.rl.pause();
+    this.rl.removeAllListeners('line');
     
     try {
       console.log(chalk.blue('⚙️  Initializing database configuration...'));
@@ -538,13 +545,12 @@ MYSQL_PASSWORD=${dbConfig.password}
         console.log(chalk.gray('💡 Set environment variables for production: MYSQL_HOST, MYSQL_USERNAME, etc.'));
       }
 
-      console.log(chalk.blue('\n🎉 Database configuration initialized successfully!'));
-
     } catch (error) {
       throw error;
     } finally {
-      // 恢复 readline 接口
+      // 恢复 readline 接口和监听器
       this.rl.resume();
+      this.setupReadlineListeners();
     }
   }
 
@@ -552,8 +558,9 @@ MYSQL_PASSWORD=${dbConfig.password}
     const fs = require('fs');
     const path = require('path');
     
-    // 暂停 readline 接口
+    // 完全关闭 readline 输入监听，让 inquirer 完全接管
     this.rl.pause();
+    this.rl.removeAllListeners('line');
     
     try {
       console.log(chalk.blue('🚀 Initializing Schema Migration in current directory...'));
@@ -725,8 +732,9 @@ CREATE INDEX \`idx_users_email\` ON \`users\` (\`email\`);
     } catch (error) {
       throw error;
     } finally {
-      // 恢复 readline 接口
+      // 恢复 readline 接口和监听器
       this.rl.resume();
+      this.setupReadlineListeners();
     }
   }
 

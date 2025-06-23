@@ -993,7 +993,7 @@ CREATE INDEX \`idx_users_email\` ON \`users\` (\`email\`);
 
       case '/create':
         if (args.length === 0) {
-          console.log(chalk.yellow('⚠ Usage: /create <migration_name> [--author=<author>]'));
+          console.log(chalk.yellow('⚠ Usage: /create <migration_name> [-a <author>] [--author=<author>]'));
           break;
         }
         try {
@@ -1093,7 +1093,8 @@ CREATE INDEX \`idx_users_email\` ON \`users\` (\`email\`);
   }
 
   parseAuthorFromArgs(args) {
-    const authorIndex = args.findIndex(arg => arg.startsWith('--author'));
+    // 支持长参数 --author 和短参数 -a
+    const authorIndex = args.findIndex(arg => arg.startsWith('--author') || arg === '-a');
     if (authorIndex !== -1) {
       if (args[authorIndex].includes('=')) {
         return args[authorIndex].split('=')[1];

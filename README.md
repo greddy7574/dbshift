@@ -61,7 +61,7 @@ When you run `dbshift`, you enter interactive mode where you can use these comma
 | `/init` | Initialize new project | `/init` |
 | `/migrate` | Run pending migrations | `/migrate -e production` |
 | `/status` | Show migration status | `/status` |
-| `/history` | Show migration execution history | `/history --author=John` |
+| `/history` | Show migration execution history | `/history -a John` |
 | `/create` | Create new migration with guided input | `/create` |
 | `/config` | Configuration management | `/config` |
 | `/ping` | Test database connection | `/ping --host=localhost` |

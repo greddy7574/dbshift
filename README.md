@@ -2,7 +2,7 @@
 
 A simple and powerful MySQL database migration tool inspired by Flyway.
 
-✨ **New in v0.3.27**: Fixed interactive mode filename generation and arrow key display issues! Smoother user experience!
+✨ **New in v0.3.28**: Enhanced duplicate input detection! Fixed double character issue after create command!
 
 ## 🚀 Quick Start
 
@@ -459,7 +459,13 @@ MIT License - see LICENSE file for details.
 
 ## 📚 Version History
 
-### v0.3.27 (Latest)
+### v0.3.28 (Latest)
+- 🎯 **Duplicate Input Detection**: Enhanced logic to prevent double character input after commands
+- 🔧 **Readline State Management**: Improved state cleanup during interface recreation
+- ⚡ **Input Responsiveness**: Added timing delays to ensure readline stability
+- 📖 **Bug Fix**: Resolved "s" displaying as "ss" after /create command execution
+
+### v0.3.27
 - 🔧 **Interactive Mode Filename Fix**: Eliminated double underscores in generated migration filenames
 - 🎯 **Arrow Key Display Fix**: Enhanced readline configuration to prevent display corruption
 - ✅ **Unified Filename Generation**: Interactive and CLI modes now use identical sanitization logic

@@ -124,21 +124,22 @@ class DBShiftInteractive {
 
     this.rl.on('line', async (line) => {
       const trimmedInput = line.trim();
+      const currentTime = Date.now();
       
-      // 简化的重复检测：更长的时间窗口来处理 delete 键问题
-      const duplicateThreshold = 300; // 增加到 300ms
+      // 简化但更有效的重复检测
+      const duplicateThreshold = 300; // 300ms 检测窗口
       
-      // 防止重复输入：如果输入与上次相同且时间间隔很短，则忽略
-      if (trimmedInput === this.lastInput && this.lastInputTime && (Date.now() - this.lastInputTime < duplicateThreshold)) {
-        // 只在明显重复时显示消息，空输入不显示
-        if (trimmedInput.length > 0) {
-          console.log(chalk.gray('🔄 Duplicate input ignored'));
-        }
+      // 防止重复输入：只检查相同输入在短时间内的重复
+      if (this.lastInput === trimmedInput && 
+          this.lastInputTime && 
+          (currentTime - this.lastInputTime) < duplicateThreshold) {
+        // 静默忽略重复输入，不显示消息避免干扰
         return;
       }
       
+      // 更新状态
       this.lastInput = trimmedInput;
-      this.lastInputTime = Date.now();
+      this.lastInputTime = currentTime;
       
       await this.handleInput(trimmedInput);
     });
@@ -159,6 +160,10 @@ class DBShiftInteractive {
     // 关闭当前接口（现在不会触发退出）
     this.rl.close();
     
+    // 清除重复输入检测状态，防止重新创建后的干扰
+    this.lastInput = '';
+    this.lastInputTime = 0;
+    
     // 重新创建接口，恢复所有功能包括 completer
     this.rl = readline.createInterface({
       input: process.stdin,
@@ -174,8 +179,10 @@ class DBShiftInteractive {
     // 重新设置监听器
     this.setupReadlineListeners();
     
-    // 恢复提示符
-    this.rl.prompt();
+    // 添加短暂延迟后再显示提示符，确保readline完全准备好
+    setTimeout(() => {
+      this.rl.prompt();
+    }, 50);
   }
 
 

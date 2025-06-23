@@ -147,6 +147,8 @@ jobs:
           echo "- 🗄️ MySQL database migration management" >> $GITHUB_OUTPUT
           echo "- 📜 Detailed migration execution history tracking" >> $GITHUB_OUTPUT
           echo "- 🎯 Interactive mode with live auto-completion" >> $GITHUB_OUTPUT
+          echo "- 🏷️ Clean filename generation (no multiple underscores)" >> $GITHUB_OUTPUT
+          echo "- ⚡ Short parameter support (-a, -e) for faster typing" >> $GITHUB_OUTPUT
           echo "- ⚙️ Flexible configuration system (env + JS config)" >> $GITHUB_OUTPUT
           echo "- 🔄 Retry mechanism for failed migrations" >> $GITHUB_OUTPUT
           echo "- 🌍 Multi-environment support (dev/staging/prod)" >> $GITHUB_OUTPUT

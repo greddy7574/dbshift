@@ -851,6 +851,7 @@ CREATE INDEX \`idx_users_email\` ON \`users\` (\`email\`);
     console.log(chalk.white('/init          ') + chalk.gray('Initialize new project'));
     console.log(chalk.white('/migrate       ') + chalk.gray('Run pending migrations'));
     console.log(chalk.white('/status        ') + chalk.gray('Show migration status'));
+    console.log(chalk.white('/history       ') + chalk.gray('Show migration execution history'));
     console.log(chalk.white('/create        ') + chalk.gray('Create new migration'));
     console.log(chalk.white('/config        ') + chalk.gray('Configuration management'));
     console.log(chalk.white('/ping          ') + chalk.gray('Test database connection'));

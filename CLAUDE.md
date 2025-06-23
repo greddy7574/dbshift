@@ -7,6 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 DBShift 是一个现代化的 MySQL 数据库迁移工具，灵感来自 Flyway。它提供了简单易用的 CLI 界面，用于数据库版本控制和自动化迁移。项目采用 Node.js + MySQL2 技术栈，设计为全局 npm 包。
 
 ### 版本历史
+- **v0.3.26**: 修复文件名多底线问题，添加短参数支持(-a)，提升用户体验
 - **v0.3.25**: 添加 history 命令，支持详细的迁移执行历史查看和按作者过滤；修复交互模式 delete 键后双字符输入问题
 - **v0.3.5**: 修复所有命令的会话持久性问题，统一错误处理机制
 - **v0.3.4**: 实现即时自动补全功能，输入"/"立即显示命令，支持智能过滤
@@ -721,6 +722,85 @@ this.rl.on('line', async (line) => {
 ```bash
 node test-delete-fix.js
 ```
+
+### 文件名多底线修复 (v0.3.26)
+
+#### 问题描述
+用户创建迁移时，输入如 `"test"` 会生成包含多个底线的文件名：`20250623001_jerry__test_.sql`
+
+#### 根本原因
+- **过度激进的正则**: `/[^a-zA-Z0-9]/g` 将所有非字母数字字符替换为底线
+- **引号处理**: 双引号被替换为底线，导致 `"test"` → `_test_`
+- **连续底线**: 多个特殊字符产生连续底线
+
+#### 修复方案
+```javascript
+// 修复前的问题代码
+const sanitizedName = name.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
+
+// 修复后的智能清理
+const sanitizedName = name
+  .toLowerCase()
+  .replace(/[^a-zA-Z0-9\-]/g, '_')  // 保留连字符，其他转底线
+  .replace(/_{2,}/g, '_')           // 多个连续底线合并为一个
+  .replace(/^_+|_+$/g, '');         // 移除开头和结尾的底线
+```
+
+#### 修复效果
+| 输入 | 修复前 | 修复后 |
+|------|--------|--------|
+| `"test"` | `_test_` | `test` |
+| `"test file"` | `_test_file_` | `test_file` |
+| `"test-file"` | `_test_file_` | `test-file` |
+| `"test  file"` | `_test__file_` | `test_file` |
+
+#### 修复范围
+- `lib/commands/create.js`: 交互式创建命令
+- `lib/core/migration.js`: MigrationManager 文件名生成
+
+### 短参数支持增强 (v0.3.26)
+
+#### 功能背景
+用户希望使用更简洁的命令格式，如 `/create "test" -a jerry` 而不是 `/create "test" --author=jerry`
+
+#### 实现方案
+```javascript
+// 增强的参数解析器
+parseAuthorFromArgs(args) {
+  // 支持长参数 --author 和短参数 -a
+  const authorIndex = args.findIndex(arg => arg.startsWith('--author') || arg === '-a');
+  if (authorIndex !== -1) {
+    if (args[authorIndex].includes('=')) {
+      return args[authorIndex].split('=')[1];
+    } else if (args[authorIndex + 1]) {
+      return args[authorIndex + 1];
+    }
+  }
+  return 'Admin';
+}
+```
+
+#### 支持的参数格式
+**CLI 模式** (原有支持):
+```bash
+dbshiftcli create test -a jerry           # 短参数
+dbshiftcli create test --author jerry     # 长参数  
+dbshiftcli create test --author=jerry     # 赋值形式
+```
+
+**交互模式** (新增支持):
+```bash
+/create test -a jerry                     # 新增短参数支持
+/create test --author jerry               # 原有长参数
+/create test --author=jerry               # 原有赋值形式
+/history -a john                         # 新增短参数支持
+/history --author=john                    # 原有长参数
+```
+
+#### 一致性改进
+- **CLI + 交互模式**: 参数格式完全统一
+- **用户体验**: 更简洁的命令语法
+- **向后兼容**: 保持所有原有参数格式
 
 ### 會話持久性統一修復 (v0.3.5)
 

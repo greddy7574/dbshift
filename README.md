@@ -2,7 +2,7 @@
 
 A simple and powerful MySQL database migration tool inspired by Flyway.
 
-✨ **New in v0.3.25**: Added history command for detailed migration execution tracking! + Fixed delete key double character input issue!
+✨ **New in v0.3.26**: Enhanced user experience with filename fixes and short parameter support! Perfect for daily usage!
 
 ## 🚀 Quick Start
 
@@ -82,9 +82,15 @@ When you run `dbshift`, you enter interactive mode where you can use these comma
 2. **NEW v0.3.4**: Type `/` to instantly see all commands - no Enter key needed!
 3. **NEW v0.3.4**: Type `/i` to see only commands starting with "/i" (like /init)
 4. **FIXED v0.3.5**: ALL commands now return to prompt - no more unexpected exits!
-5. Type specific commands like `/init`, `/migrate`, `/status`, etc.
-6. All commands (success/error) return to prompt for continuous workflow
-7. Only type `q` when you want to exit
+5. **NEW v0.3.26**: Use short parameters like `/create test -a jerry` for faster typing!
+6. Type specific commands like `/init`, `/migrate`, `/status`, etc.
+7. All commands (success/error) return to prompt for continuous workflow
+8. Only type `q` when you want to exit
+
+🔧 **Recent Improvements (v0.3.26)**:
+- **🏷️ Clean Filenames**: No more multiple underscores! `"test file"` → `test_file.sql` (not `__test_file__.sql`)
+- **⚡ Short Parameters**: Use `-a jerry` instead of `--author=jerry` for faster typing
+- **🎯 Consistent Experience**: Same parameter format in both CLI and interactive modes
 
 ### CLI Mode Commands
 

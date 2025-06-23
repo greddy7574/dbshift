@@ -405,7 +405,7 @@ showCommandSelector() {
 | `/init` | Initialize new project | `/init` | ✅ Fixed v0.3.5 |
 | `/migrate` | Run pending migrations | `/migrate -e production` | ✅ |
 | `/status` | Show migration status | `/status` | ✅ Fixed v0.3.5 |
-| `/history` | Show detailed migration execution history | `/history --author=John` | ✅ New v0.3.25 |
+| `/history` | Show detailed migration execution history | `/history -a John` | ✅ New v0.3.25 |
 | `/create` | Create new migration with guided input | `/create` | ✅ Fixed v0.3.5 |
 | `/config` | Configuration management | `/config` | ✅ |
 | `/ping` | Test database connection | `/ping --host=localhost` | ✅ |
@@ -413,9 +413,11 @@ showCommandSelector() {
 | `/help` | Show text-based help menu | `/help` | ✅ |
 | `q` | Quit interactive mode | `q` | N/A (exits) |
 
-#### Key Improvements (v0.3.4 - v0.3.5)
+#### Key Improvements (v0.3.4 - v0.3.26)
 - **Live Auto-Completion**: Type "/" to instantly see commands, type "/i" to filter to init-related commands
 - **Perfect Session Persistence**: ALL commands now return to prompt after execution (fixed in v0.3.5)
+- **Clean Filenames**: Intelligent sanitization prevents multiple underscores (v0.3.26)
+- **Short Parameter Support**: Use `-a jerry` instead of `--author=jerry` for faster typing (v0.3.26)
 - **Unified Error Handling**: Consistent ErrorHandler pattern across all commands
 - **Real-time Filtering**: Commands filter as you type without needing to press Enter
 
@@ -703,6 +705,86 @@ dbshiftcli history -e production     # Show production environment history
 - Audit who executed which migrations and when
 - Debug migration issues by viewing execution history
 - Monitor team collaboration and migration ownership
+
+## Filename Sanitization (v0.3.26)
+
+DBShift v0.3.26 introduces improved filename sanitization to prevent multiple underscores and ensure clean migration filenames.
+
+### Problem Solved
+Previous versions generated messy filenames with multiple underscores:
+```bash
+Input: "test file"  → Generated: 20250623001_jerry__test_.sql  ❌
+Input: "test"       → Generated: 20250623001_jerry__test_.sql  ❌
+```
+
+### Enhanced Sanitization Logic
+```javascript
+// New intelligent filename cleaning
+const sanitizedName = name
+  .toLowerCase()
+  .replace(/[^a-zA-Z0-9\-]/g, '_')  // Allow hyphens, convert others to underscore
+  .replace(/_{2,}/g, '_')           // Merge consecutive underscores
+  .replace(/^_+|_+$/g, '');         // Remove leading/trailing underscores
+```
+
+### Clean Results
+```bash
+Input: "test file"    → Generated: 20250623001_jerry_test_file.sql    ✅
+Input: "test"         → Generated: 20250623001_jerry_test.sql         ✅
+Input: "test-feature" → Generated: 20250623001_jerry_test-feature.sql ✅
+Input: "test  file"   → Generated: 20250623001_jerry_test_file.sql    ✅
+```
+
+## Short Parameter Support (v0.3.26)
+
+Enhanced parameter parsing for both CLI and interactive modes with consistent short parameter support.
+
+### Supported Parameter Formats
+
+#### CLI Mode Commands
+```bash
+# Author parameter variations
+dbshiftcli create migration_name -a john          # Short form
+dbshiftcli create migration_name --author john    # Long form
+dbshiftcli create migration_name --author=john    # Assignment form
+
+# Environment parameter variations  
+dbshiftcli history -e production                  # Short form
+dbshiftcli history --env production               # Long form
+dbshiftcli history --env=production               # Assignment form
+```
+
+#### Interactive Mode Commands
+```bash
+# Author parameter variations (NEW in v0.3.26)
+/create migration_name -a john                    # Short form ✨ NEW
+/create migration_name --author john              # Long form
+/create migration_name --author=john              # Assignment form
+
+# Environment parameter variations
+/history -e production                            # Short form
+/history --env production                         # Long form
+/history --env=production                         # Assignment form
+```
+
+### Technical Implementation
+```javascript
+parseAuthorFromArgs(args) {
+  // Enhanced to support both long and short parameters
+  const authorIndex = args.findIndex(arg => 
+    arg.startsWith('--author') || arg === '-a'
+  );
+  
+  if (authorIndex !== -1) {
+    if (args[authorIndex].includes('=')) {
+      return args[authorIndex].split('=')[1];
+    } else if (args[authorIndex + 1]) {
+      return args[authorIndex + 1];
+    }
+  }
+  return 'Admin';
+}
+```
 
 ## Configuration Management
 

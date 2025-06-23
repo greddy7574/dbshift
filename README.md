@@ -2,7 +2,7 @@
 
 A simple and powerful MySQL database migration tool inspired by Flyway.
 
-✨ **New in v0.3.5**: Perfect session persistence for all commands! + Live auto-completion with instant filtering!
+✨ **New in v0.3.25**: Added history command for detailed migration execution tracking! + Fixed delete key double character input issue!
 
 ## 🚀 Quick Start
 
@@ -28,6 +28,7 @@ dbshift
 # /create              Create new migration  
 # /migrate             Run migrations
 # /status              Show migration status
+# /history             Show migration execution history
 # /config              Configuration management
 # /ping                Test database connection
 # /help                Show help menu
@@ -42,6 +43,8 @@ dbshiftcli init
 dbshiftcli create create_users_table
 dbshiftcli migrate
 dbshiftcli status
+dbshiftcli history              # View migration history
+dbshiftcli history --author=John # Filter by author
 dbshiftcli config
 dbshiftcli ping
 ```
@@ -58,6 +61,7 @@ When you run `dbshift`, you enter interactive mode where you can use these comma
 | `/init` | Initialize new project | `/init` |
 | `/migrate` | Run pending migrations | `/migrate -e production` |
 | `/status` | Show migration status | `/status` |
+| `/history` | Show migration execution history | `/history --author=John` |
 | `/create` | Create new migration with guided input | `/create` |
 | `/config` | Configuration management | `/config` |
 | `/ping` | Test database connection | `/ping --host=localhost` |
@@ -103,6 +107,20 @@ Show the status of all migrations (completed, pending, failed).
 
 Options:
 - `-e, --env <environment>` - Specify environment (default: development)
+
+### `dbshiftcli history [options]`
+Show detailed migration execution history with timestamps and execution details.
+
+Options:
+- `-e, --env <environment>` - Specify environment (default: development)
+- `-a, --author <author>` - Filter history by author name
+
+Examples:
+```bash
+dbshiftcli history
+dbshiftcli history --author=John
+dbshiftcli history -e production
+```
 
 ### `dbshiftcli create <name> [options]`
 Create a new migration file with proper naming convention.

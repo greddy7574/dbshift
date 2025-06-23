@@ -9,6 +9,7 @@ const initCommand = require('../lib/commands/init');
 const migrateCommand = require('../lib/commands/migrate');
 const statusCommand = require('../lib/commands/status');
 const createCommand = require('../lib/commands/create');
+const historyCommand = require('../lib/commands/history');
 const showConfigCommand = require('../lib/commands/config/index');
 const configInitCommand = require('../lib/commands/config/init');
 const configSetCommand = require('../lib/commands/config/set');
@@ -72,6 +73,15 @@ program
   .option('-e, --env <environment>', 'specify environment (default: development)')
   .addHelpText('after', '\nShows which migrations have been executed and which are pending')
   .action(statusCommand);
+
+// history 命令
+program
+  .command('history')
+  .description('Show detailed migration execution history')
+  .option('-e, --env <environment>', 'specify environment (default: development)')
+  .option('-a, --author <author>', 'filter history by author name')
+  .addHelpText('after', '\nExamples:\n  dbshift history\n  dbshift history --author=John\n  dbshift history -e production')
+  .action(historyCommand);
 
 // create 命令
 program

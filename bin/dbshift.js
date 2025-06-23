@@ -10,6 +10,7 @@ const initCommand = require('../lib/commands/init');
 const migrateCommand = require('../lib/commands/migrate');
 const statusCommand = require('../lib/commands/status');
 const createCommand = require('../lib/commands/create');
+const historyCommand = require('../lib/commands/history');
 const showConfigCommand = require('../lib/commands/config/index');
 const configInitCommand = require('../lib/commands/config/init');
 // const configSetCommand = require('../lib/commands/config/set'); // 暂时不用，保留给未来扩展
@@ -17,15 +18,23 @@ const testConnectionCommand = require('../lib/commands/test-connection');
 
 class DBShiftInteractive {
   constructor() {
+    // 确保输入流处于正确状态
+    if (process.stdin.isTTY) {
+      process.stdin.setRawMode(false);
+    }
+    
     this.rl = readline.createInterface({
       input: process.stdin,
       output: process.stdout,
       prompt: chalk.blue('dbshift> '),
-      completer: this.completer.bind(this)
+      completer: this.completer.bind(this),
+      crlfDelay: Infinity  // 防止Windows系统的回车换行问题
     });
 
     this.currentContext = 'main';
     this.commands = this.getAvailableCommands();
+    this.lastInput = '';  // 用于防止重复输入
+    this.lastInputTime = 0;  // 记录上次输入时间
     this.setupReadline();
   }
 
@@ -35,6 +44,7 @@ class DBShiftInteractive {
         { command: '/init', description: 'Initialize new project' },
         { command: '/migrate', description: 'Run pending migrations' },
         { command: '/status', description: 'Show migration status' },
+        { command: '/history', description: 'Show migration execution history' },
         { command: '/create', description: 'Create new migration' },
         { command: '/config', description: 'Configuration management' },
         { command: '/ping', description: 'Test database connection' },
@@ -110,7 +120,24 @@ class DBShiftInteractive {
     });
 
     this.rl.on('line', async (line) => {
-      await this.handleInput(line.trim());
+      const trimmedInput = line.trim();
+      
+      // 简化的重复检测：更长的时间窗口来处理 delete 键问题
+      const duplicateThreshold = 300; // 增加到 300ms
+      
+      // 防止重复输入：如果输入与上次相同且时间间隔很短，则忽略
+      if (trimmedInput === this.lastInput && this.lastInputTime && (Date.now() - this.lastInputTime < duplicateThreshold)) {
+        // 只在明显重复时显示消息，空输入不显示
+        if (trimmedInput.length > 0) {
+          console.log(chalk.gray('🔄 Duplicate input ignored'));
+        }
+        return;
+      }
+      
+      this.lastInput = trimmedInput;
+      this.lastInputTime = Date.now();
+      
+      await this.handleInput(trimmedInput);
     });
 
     this.rl.on('close', () => {
@@ -134,7 +161,8 @@ class DBShiftInteractive {
       input: process.stdin,
       output: process.stdout,
       prompt: chalk.blue('dbshift> '),
-      completer: this.completer.bind(this)
+      completer: this.completer.bind(this),
+      crlfDelay: Infinity  // 防止Windows系统的回车换行问题
     });
     
     // 重新设置监听器
@@ -159,6 +187,7 @@ class DBShiftInteractive {
         { command: '/init', description: 'Initialize new project' },
         { command: '/migrate', description: 'Run pending migrations' },
         { command: '/status', description: 'Show migration status' },
+        { command: '/history', description: 'Show migration execution history' },
         { command: '/create', description: 'Create new migration' },
         { command: '/config', description: 'Configuration management' },
         { command: '/ping', description: 'Test database connection' },
@@ -195,6 +224,7 @@ class DBShiftInteractive {
         '/init',
         '/migrate',
         '/status',
+        '/history',
         '/create',
         '/config',
         '/ping',
@@ -947,6 +977,17 @@ CREATE INDEX \`idx_users_email\` ON \`users\` (\`email\`);
           console.log(chalk.green('✅ Status check completed!'));
         } catch (error) {
           console.error(chalk.red('❌ Failed to get status:'), error.message);
+        }
+        break;
+
+      case '/history':
+        try {
+          const historyEnv = this.parseEnvFromArgs(args);
+          const author = this.parseAuthorFromArgs(args);
+          await historyCommand({ env: historyEnv, author });
+          console.log(chalk.green('✅ History loaded successfully!'));
+        } catch (error) {
+          console.error(chalk.red('❌ Failed to load history:'), error.message);
         }
         break;
 

@@ -145,9 +145,12 @@ jobs:
           echo "" >> $GITHUB_OUTPUT
           echo "### ✨ Core Features" >> $GITHUB_OUTPUT
           echo "- 🗄️ MySQL database migration management" >> $GITHUB_OUTPUT
+          echo "- 📜 Detailed migration execution history tracking" >> $GITHUB_OUTPUT
+          echo "- 🎯 Interactive mode with live auto-completion" >> $GITHUB_OUTPUT
           echo "- ⚙️ Flexible configuration system (env + JS config)" >> $GITHUB_OUTPUT
           echo "- 🔄 Retry mechanism for failed migrations" >> $GITHUB_OUTPUT
           echo "- 🌍 Multi-environment support (dev/staging/prod)" >> $GITHUB_OUTPUT
+          echo "- 👥 Author-based filtering and team collaboration" >> $GITHUB_OUTPUT
           echo "- 📝 Standard SQL syntax compatibility" >> $GITHUB_OUTPUT
           echo "- 🎯 Flyway-inspired workflow" >> $GITHUB_OUTPUT
           echo "" >> $GITHUB_OUTPUT
@@ -155,10 +158,12 @@ jobs:
           echo "- \`dbshift init\` - Initialize migration project" >> $GITHUB_OUTPUT
           echo "- \`dbshift migrate\` - Run pending migrations" >> $GITHUB_OUTPUT
           echo "- \`dbshift status\` - Check migration status" >> $GITHUB_OUTPUT
+          echo "- \`dbshift history\` - View detailed migration execution history" >> $GITHUB_OUTPUT
           echo "- \`dbshift create\` - Create new migration file" >> $GITHUB_OUTPUT
           echo "- \`dbshift config\` - View current configuration" >> $GITHUB_OUTPUT
           echo "- \`dbshift config-init\` - Interactive setup wizard" >> $GITHUB_OUTPUT
           echo "- \`dbshift config-set\` - Direct configuration updates" >> $GITHUB_OUTPUT
+          echo "- \`dbshift ping\` - Test database connection" >> $GITHUB_OUTPUT
           echo "" >> $GITHUB_OUTPUT
           echo "### 🛠️ Technical Stack" >> $GITHUB_OUTPUT
           echo "- Node.js >= 14.0.0" >> $GITHUB_OUTPUT

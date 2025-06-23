@@ -405,6 +405,7 @@ showCommandSelector() {
 | `/init` | Initialize new project | `/init` | ✅ Fixed v0.3.5 |
 | `/migrate` | Run pending migrations | `/migrate -e production` | ✅ |
 | `/status` | Show migration status | `/status` | ✅ Fixed v0.3.5 |
+| `/history` | Show detailed migration execution history | `/history --author=John` | ✅ New v0.3.25 |
 | `/create` | Create new migration with guided input | `/create` | ✅ Fixed v0.3.5 |
 | `/config` | Configuration management | `/config` | ✅ |
 | `/ping` | Test database connection | `/ping --host=localhost` | ✅ |
@@ -671,6 +672,37 @@ async routeCommand(command, args) {
 - **Error Recovery**: Failed commands display errors but keep session alive
 - **Backward Compatibility**: CLI mode behavior unchanged
 - **User Experience**: Continuous workflow without restarts
+
+## History Command (v0.3.25)
+
+DBShift v0.3.25 introduces the `history` command for viewing detailed migration execution history.
+
+### `dbshiftcli history [options]`
+Show detailed migration execution history with timestamps, execution status, and author information.
+
+```bash
+dbshiftcli history                   # Show all migration history
+dbshiftcli history --author=John     # Filter by specific author
+dbshiftcli history -e production     # Show production environment history
+```
+
+**Output includes:**
+- Migration execution status (Completed/Pending)
+- Version number and author information
+- File description and name
+- Execution timestamps (create_date/modify_date)
+- Summary statistics by total, completed, and pending counts
+- Author statistics breakdown (when not filtered by author)
+
+**Options:**
+- `-e, --env <environment>` - Specify target environment (default: development)
+- `-a, --author <author>` - Filter history records by author name
+
+**Use Cases:**
+- Track migration execution progress across environments
+- Audit who executed which migrations and when
+- Debug migration issues by viewing execution history
+- Monitor team collaboration and migration ownership
 
 ## Configuration Management
 

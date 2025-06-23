@@ -279,7 +279,7 @@ Validator.validateDatabaseConnection(config);
 
 ## Interactive Mode (v0.3.0+)
 
-DBShift v0.3.0+ introduces enhanced interactive mode with Tab auto-completion. v0.3.1 fixes critical session persistence issues. v0.3.2 perfects the user experience with Claude Code-like display format. v0.3.4 adds live auto-completion, and v0.3.5 completely fixes session persistence for all commands.
+DBShift v0.3.0+ introduces enhanced interactive mode with Tab auto-completion. v0.3.1 fixes critical session persistence issues. v0.3.2 perfects the user experience with Claude Code-like display format. v0.3.4 adds live auto-completion, v0.3.5 completely fixes session persistence for all commands, and v0.3.27 resolves filename generation and readline display issues.
 
 ### Interactive Mode Entry
 
@@ -413,13 +413,15 @@ showCommandSelector() {
 | `/help` | Show text-based help menu | `/help` | ✅ |
 | `q` | Quit interactive mode | `q` | N/A (exits) |
 
-#### Key Improvements (v0.3.4 - v0.3.26)
+#### Key Improvements (v0.3.4 - v0.3.27)
+- **Interactive Mode Stability**: Fixed filename double underscores and arrow key display issues (v0.3.27)
 - **Live Auto-Completion**: Type "/" to instantly see commands, type "/i" to filter to init-related commands
 - **Perfect Session Persistence**: ALL commands now return to prompt after execution (fixed in v0.3.5)
-- **Clean Filenames**: Intelligent sanitization prevents multiple underscores (v0.3.26)
+- **Clean Filenames**: Intelligent sanitization prevents multiple underscores (v0.3.26/v0.3.27)
 - **Short Parameter Support**: Use `-a jerry` instead of `--author=jerry` for faster typing (v0.3.26)
 - **Unified Error Handling**: Consistent ErrorHandler pattern across all commands
 - **Real-time Filtering**: Commands filter as you type without needing to press Enter
+- **Enhanced Readline**: Improved configuration prevents arrow key conflicts (v0.3.27)
 
 ### Guided Command Execution
 
@@ -706,16 +708,23 @@ dbshiftcli history -e production     # Show production environment history
 - Debug migration issues by viewing execution history
 - Monitor team collaboration and migration ownership
 
-## Filename Sanitization (v0.3.26)
+## Filename Sanitization (v0.3.26/v0.3.27)
 
-DBShift v0.3.26 introduces improved filename sanitization to prevent multiple underscores and ensure clean migration filenames.
+DBShift v0.3.26 introduces improved filename sanitization to prevent multiple underscores and ensure clean migration filenames. v0.3.27 extends this fix to interactive mode for complete consistency.
 
 ### Problem Solved
 Previous versions generated messy filenames with multiple underscores:
 ```bash
+# CLI mode (fixed in v0.3.26):
 Input: "test file"  → Generated: 20250623001_jerry__test_.sql  ❌
-Input: "test"       → Generated: 20250623001_jerry__test_.sql  ❌
+
+# Interactive mode (fixed in v0.3.27):
+Input: "qwer"       → Generated: 20250623001_jerry__qwer_.sql  ❌
+Input: "test file"  → Generated: 20250623001_jerry__test_file_.sql  ❌
 ```
+
+**Root Cause (v0.3.27 Discovery)**: 
+Interactive mode used different sanitization logic in `bin/dbshift.js` than CLI mode in `lib/commands/create.js`.
 
 ### Enhanced Sanitization Logic
 ```javascript
@@ -727,13 +736,19 @@ const sanitizedName = name
   .replace(/^_+|_+$/g, '');         // Remove leading/trailing underscores
 ```
 
-### Clean Results
+### Clean Results (v0.3.27 Unified)
 ```bash
+# Both CLI and Interactive modes now produce identical results:
 Input: "test file"    → Generated: 20250623001_jerry_test_file.sql    ✅
 Input: "test"         → Generated: 20250623001_jerry_test.sql         ✅
 Input: "test-feature" → Generated: 20250623001_jerry_test-feature.sql ✅
 Input: "test  file"   → Generated: 20250623001_jerry_test_file.sql    ✅
+Input: "qwer"         → Generated: 20250623001_jerry_qwer.sql         ✅
+Input: '"qwer"'       → Generated: 20250623001_jerry_qwer.sql         ✅
 ```
+
+**v0.3.27 Technical Fix**:
+Updated `handleCreateMigration()` in `bin/dbshift.js` to use the same enhanced sanitization logic as `lib/commands/create.js`.
 
 ## Short Parameter Support (v0.3.26)
 

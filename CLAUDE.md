@@ -7,6 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 DBShift 是一个现代化的 MySQL 数据库迁移工具，灵感来自 Flyway。它提供了简单易用的 CLI 界面，用于数据库版本控制和自动化迁移。项目采用 Node.js + MySQL2 技术栈，设计为全局 npm 包。
 
 ### 版本历史
+- **v0.3.27**: 修复交互模式文件名双下划线问题，完善 readline 历史记录配置解决箭头键显示错乱
 - **v0.3.26**: 修复文件名多底线问题，添加短参数支持(-a)，提升用户体验
 - **v0.3.25**: 添加 history 命令，支持详细的迁移执行历史查看和按作者过滤；修复交互模式 delete 键后双字符输入问题
 - **v0.3.5**: 修复所有命令的会话持久性问题，统一错误处理机制
@@ -576,6 +577,71 @@ static async executeWithErrorHandling(fn) {
 - ✅ 保持用户会话连续性
 - ✅ 提供清晰的错误反馈
 - ✅ 不影响 CLI 模式的原有行为
+
+#### 文件名双下划线修复 (v0.3.27)
+
+**核心问题发现**:
+交互模式中发现文件名仍然会产生双下划线，如 `20250623001_jerry__qwer_.sql`，经过分析发现问题根源。
+
+**问题原因**:
+```javascript
+// bin/dbshift.js 第322行使用旧的清理逻辑
+const sanitizedName = migrationName.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
+```
+
+交互模式的 `handleCreateMigration` 函数使用了简单的字符替换，没有：
+- 合并连续下划线
+- 移除开头结尾下划线
+- 保留连字符
+
+**解决方案**:
+```javascript
+// v0.3.27 修复：统一使用改进的清理逻辑
+const sanitizedName = migrationName
+  .toLowerCase()
+  .replace(/[^a-zA-Z0-9\-]/g, '_')  // 允许连字符，其他特殊字符转为下划线
+  .replace(/_{2,}/g, '_')           // 多个连续下划线合并为一个
+  .replace(/^_+|_+$/g, '');         // 移除开头和结尾的下划线
+```
+
+**修复结果验证**:
+```bash
+输入: "qwer"       → 输出: 20250623001_jerry_qwer.sql         ✅
+输入: "test file"  → 输出: 20250623001_jerry_test_file.sql    ✅
+输入: '"qwer"'     → 输出: 20250623001_jerry_qwer.sql         ✅
+```
+
+#### 箭头键显示错乱修复 (v0.3.27)
+
+**问题现象**:
+用户反馈在交互模式中按上箭头键会导致显示错乱，影响使用体验。
+
+**解决方案**:
+完善 readline 历史记录配置，在两个 `readline.createInterface()` 位置都添加完整配置：
+
+```javascript
+// v0.3.27 完善的 readline 配置
+this.rl = readline.createInterface({
+  input: process.stdin,
+  output: process.stdout,
+  prompt: chalk.blue('dbshift> '),
+  completer: this.completer.bind(this),
+  crlfDelay: Infinity,         // 防止Windows系统的回车换行问题
+  history: [],                 // 禁用历史记录，避免箭头键冲突  
+  historySize: 0,              // 设置历史记录大小为0
+  removeHistoryDuplicates: false  // 禁用历史去重
+});
+```
+
+**修复位置**:
+- `constructor()` 中的主要 readline 接口创建
+- `recreateReadlineInterface()` 中的接口重建
+
+**预期效果**:
+- ✅ 完全禁用历史记录功能
+- ✅ 箭头键不再触发历史导航
+- ✅ 避免显示错乱问题
+- ✅ 保持其他功能正常
 
 #### 用戶體驗完善 (v0.3.2 改進)
 

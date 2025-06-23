@@ -28,7 +28,10 @@ class DBShiftInteractive {
       output: process.stdout,
       prompt: chalk.blue('dbshift> '),
       completer: this.completer.bind(this),
-      crlfDelay: Infinity  // 防止Windows系统的回车换行问题
+      crlfDelay: Infinity,         // 防止Windows系统的回车换行问题
+      history: [],                 // 禁用历史记录，避免箭头键冲突  
+      historySize: 0,              // 设置历史记录大小为0
+      removeHistoryDuplicates: false  // 禁用历史去重
     });
 
     this.currentContext = 'main';
@@ -162,7 +165,10 @@ class DBShiftInteractive {
       output: process.stdout,
       prompt: chalk.blue('dbshift> '),
       completer: this.completer.bind(this),
-      crlfDelay: Infinity  // 防止Windows系统的回车换行问题
+      crlfDelay: Infinity,         // 防止Windows系统的回车换行问题
+      history: [],                 // 禁用历史记录，避免箭头键冲突  
+      historySize: 0,              // 设置历史记录大小为0
+      removeHistoryDuplicates: false  // 禁用历史去重
     });
     
     // 重新设置监听器
@@ -317,7 +323,12 @@ class DBShiftInteractive {
       const sequence = FileUtils.generateSequence(migrationsDir, dateStr, author);
 
       const version = dateStr + sequence;
-      const sanitizedName = migrationName.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
+      // 改进的文件名清理：保留连字符，避免连续下划线
+      const sanitizedName = migrationName
+        .toLowerCase()
+        .replace(/[^a-zA-Z0-9\-]/g, '_')  // 允许连字符，其他特殊字符转为下划线
+        .replace(/_{2,}/g, '_')           // 多个连续下划线合并为一个
+        .replace(/^_+|_+$/g, '');         // 移除开头和结尾的下划线
       const filename = `${version}_${author}_${sanitizedName}.sql`;
       const filePath = path.join(migrationsDir, filename);
 

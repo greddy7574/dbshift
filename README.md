@@ -2,7 +2,7 @@
 
 A simple and powerful MySQL database migration tool inspired by Flyway.
 
-✨ **New in v0.3.26**: Enhanced user experience with filename fixes and short parameter support! Perfect for daily usage!
+✨ **New in v0.3.27**: Fixed interactive mode filename generation and arrow key display issues! Smoother user experience!
 
 ## 🚀 Quick Start
 
@@ -459,7 +459,24 @@ MIT License - see LICENSE file for details.
 
 ## 📚 Version History
 
-### v0.3.5 (Latest)
+### v0.3.27 (Latest)
+- 🔧 **Interactive Mode Filename Fix**: Eliminated double underscores in generated migration filenames
+- 🎯 **Arrow Key Display Fix**: Enhanced readline configuration to prevent display corruption
+- ✅ **Unified Filename Generation**: Interactive and CLI modes now use identical sanitization logic
+- 📖 **Improved Stability**: More robust interactive mode experience
+
+### v0.3.26
+- 🏷️ **Short Parameter Support**: Added `-a` shorthand for `--author` in both CLI and interactive modes
+- 📁 **Filename Sanitization**: Enhanced logic to prevent multiple underscores in migration filenames
+- ⚡ **Performance Improvements**: Optimized parameter parsing and validation
+
+### v0.3.25
+- 📜 **History Command**: New `history` command shows detailed migration execution records with author filtering
+- 🔍 **Enhanced Tracking**: Comprehensive migration audit trail with timestamps and status
+- 🎯 **Author Filtering**: View history by specific developer with `--author=John` parameter
+- 🖥️ **Dual Mode Support**: History command works in both interactive and CLI modes
+
+### v0.3.5
 - 🔄 **Perfect Session Persistence**: Fixed ALL commands to return to prompt - no more unexpected exits!
 - 🛠️ **Unified Error Handling**: All commands now use consistent ErrorHandler pattern
 - ✅ **Complete Fix Verification**: `/status`, `/create`, `/init` - all commands now work perfectly

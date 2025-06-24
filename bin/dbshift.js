@@ -162,19 +162,16 @@ class DBShiftInteractive {
     // 关闭当前接口（现在不会触发退出）
     this.rl.close();
     
-    // 彻底清理 stdin 状态，解决重复字符输入问题
-    process.stdin.removeAllListeners('data');
+    // 温和清理 stdin 状态，避免输入失效
+    // 只清理可能导致重复字符的特定监听器
     process.stdin.removeAllListeners('keypress');
-    process.stdin.pause();
     
     // 重置输入状态
     this.lastInput = '';
     this.lastInputTime = 0;
     
-    // 短暂延迟确保 stdin 状态完全重置
+    // 短暂延迟确保状态重置
     setTimeout(() => {
-      // 重新启用 stdin
-      process.stdin.resume();
       
       // 重新创建接口，恢复所有功能包括 completer
       this.rl = readline.createInterface({

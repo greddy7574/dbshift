@@ -173,6 +173,9 @@ class DBShiftInteractive {
     
     // 短暂延迟确保 stdin 状态完全重置
     setTimeout(() => {
+      // 重新启用 stdin
+      process.stdin.resume();
+      
       // 重新创建接口，恢复所有功能包括 completer
       this.rl = readline.createInterface({
         input: process.stdin,
@@ -963,10 +966,8 @@ CREATE INDEX \`idx_users_email\` ON \`users\` (\`email\`);
         }
       }
 
-      // 解析命令和参数
-      const parts = input.split(' ');
-      const command = parts[0];
-      const args = parts.slice(1);
+      // 智能解析命令和参数，支持引号包围的字符串
+      const { command, args } = this.parseInputWithQuotes(input);
 
       // 路由命令处理
       await this.routeCommand(command, args);
@@ -982,6 +983,47 @@ CREATE INDEX \`idx_users_email\` ON \`users\` (\`email\`);
       // 错误后显示提示符
       this.rl.prompt();
     }
+  }
+
+  // 智能解析输入，支持引号包围的字符串
+  parseInputWithQuotes(input) {
+    const args = [];
+    let current = '';
+    let inQuotes = false;
+    let quoteChar = '';
+    
+    for (let i = 0; i < input.length; i++) {
+      const char = input[i];
+      
+      if (!inQuotes && (char === '"' || char === "'")) {
+        // 开始引号
+        inQuotes = true;
+        quoteChar = char;
+      } else if (inQuotes && char === quoteChar) {
+        // 结束引号
+        inQuotes = false;
+        quoteChar = '';
+      } else if (!inQuotes && char === ' ') {
+        // 空格分割（不在引号内）
+        if (current.trim()) {
+          args.push(current.trim());
+          current = '';
+        }
+      } else {
+        // 普通字符
+        current += char;
+      }
+    }
+    
+    // 添加最后一个参数
+    if (current.trim()) {
+      args.push(current.trim());
+    }
+    
+    return {
+      command: args[0] || '',
+      args: args.slice(1)
+    };
   }
 
   // 判断是否为需要调用 recreateReadlineInterface 的复杂命令

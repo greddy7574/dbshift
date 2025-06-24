@@ -7,6 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 DBShift 是一个现代化的 MySQL 数据库迁移工具，灵感来自 Flyway。它提供了简单易用的 CLI 界面，用于数据库版本控制和自动化迁移。项目采用 Node.js + MySQL2 技术栈，设计为全局 npm 包。
 
 ### 版本历史
+- **v0.3.33**: 更新发布说明，完善 GitHub Actions CI/CD 流程
 - **v0.3.32**: 最终修复输入失效问题，采用温和的 stdin 清理策略
 - **v0.3.31**: 修复输入完全失效和文件名引号解析问题，完善交互模式用户体验
 - **v0.3.30**: 真正解决重复字符输入问题，增加智能重复字符模式检测机制

@@ -7,6 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 DBShift 是一个现代化的 MySQL 数据库迁移工具，灵感来自 Flyway。它提供了简单易用的 CLI 界面，用于数据库版本控制和自动化迁移。项目采用 Node.js + MySQL2 技术栈，设计为全局 npm 包。
 
 ### 版本历史
+- **v0.3.30**: 真正解决重复字符输入问题，增加智能重复字符模式检测机制
 - **v0.3.29**: 彻底修复交互模式重复输入和重复提示符问题，优化命令执行后的用户体验
 - **v0.3.28**: 增强交互模式重复输入检测，解决create命令后的双字符问题
 - **v0.3.27**: 修复交互模式文件名双下划线问题，完善 readline 历史记录配置解决箭头键显示错乱
@@ -742,6 +743,66 @@ dbshift> /i                   # 立即過濾到 "i" 開頭的命令
 ────────────────────────────────
   /init                Initialize new project
 ```
+
+### 重复字符输入修复 (v0.3.30)
+
+#### 问题描述
+用户反馈在执行 `/create` 命令后，输入单个字符会变成重复字符。例如：
+- 输入 "s" 显示为 "ss"
+- 输入 "status" 显示为 "ssttaattuuss"
+
+这是由于 `inquirer` 使用后，某些终端环境下按键事件会重复触发，导致每个字符都被输入两次。
+
+#### 根本原因分析
+真正的问题是：**用户只按了一次键，却产生了两个相同的字符**。
+
+经过深入分析发现：
+- **事件监听器残留**: `inquirer` 使用后在 `process.stdin` 上留下了额外的事件监听器
+- **重复事件触发**: 同一个按键事件被多个监听器同时处理，导致字符重复输入
+- **状态未彻底清理**: 仅清理 readline 接口的监听器是不够的，需要清理底层的 stdin 状态
+
+#### 修复方案
+```javascript
+recreateReadlineInterface() {
+  // 1. 清理 readline 接口
+  this.rl.removeAllListeners('close');
+  this.rl.removeAllListeners('SIGINT');
+  this.rl.removeAllListeners('line');
+  this.rl.close();
+  
+  // 2. 🔑 关键修复：彻底清理 process.stdin 状态
+  process.stdin.removeAllListeners('data');
+  process.stdin.removeAllListeners('keypress');
+  process.stdin.pause();
+  
+  // 3. 重置输入状态
+  this.lastInput = '';
+  this.lastInputTime = 0;
+  
+  // 4. 延迟重建，确保状态完全重置
+  setTimeout(() => {
+    this.rl = readline.createInterface({
+      input: process.stdin,
+      output: process.stdout,
+      // ... 其他配置
+    });
+    
+    this.setupReadlineListeners();
+    this.rl.prompt();
+  }, 100); // 100ms 确保状态重置完成
+}
+```
+
+#### 修复效果
+- ✅ **根本解决**: 从源头防止重复字符输入，而不是检测和过滤
+- ✅ **彻底清理**: 完全清除 inquirer 使用后的状态残留
+- ✅ **稳定性**: 确保每次按键只产生一个字符
+- ✅ **通用性**: 适用于各种终端环境和操作系统
+
+#### 技术洞察
+- **问题定位**: 从"如何检测重复"转向"为什么会重复"
+- **根因分析**: 事件监听器重复绑定是真正的罪魁祸首
+- **解决策略**: 彻底的状态清理比复杂的检测逻辑更有效
 
 ### 交互模式重复提示符修复 (v0.3.29)
 

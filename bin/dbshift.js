@@ -127,24 +127,15 @@ class DBShiftInteractive {
       const trimmedInput = line.trim();
       const currentTime = Date.now();
       
-      // 增强的重复检测，解决create命令后的双字符问题
+      // 基础重复检测机制（保留原有功能）
       const duplicateThreshold = 300; // 300ms 检测窗口
       
-      // 处理冷却期：如果lastInputTime是未来时间（冷却期），等待冷却完成
-      if (this.lastInputTime > currentTime) {
-        // 在冷却期内，忽略所有输入避免重复字符
-        if (trimmedInput.length > 0) {
-          return;
-        }
-      }
-      
-      // 正常的重复检测：相同输入在短时间内重复
+      // 检测完全相同的连续输入
       if (this.lastInput === trimmedInput && 
           this.lastInputTime && 
-          this.lastInputTime <= currentTime && // 确保不在冷却期
           trimmedInput.length > 0 && 
           (currentTime - this.lastInputTime) < duplicateThreshold) {
-        // 静默忽略重复输入，不显示消息避免干扰
+        // 静默忽略重复输入
         return;
       }
       
@@ -171,30 +162,35 @@ class DBShiftInteractive {
     // 关闭当前接口（现在不会触发退出）
     this.rl.close();
     
-    // 增强重复输入检测：设置较长的冷却期，防止create命令后的重复字符
-    // 清空lastInput但保持较长的冷却时间，确保接下来的输入不被误判为重复
+    // 彻底清理 stdin 状态，解决重复字符输入问题
+    process.stdin.removeAllListeners('data');
+    process.stdin.removeAllListeners('keypress');
+    process.stdin.pause();
+    
+    // 重置输入状态
     this.lastInput = '';
-    this.lastInputTime = Date.now() + 300; // 设置未来时间，提供额外的冷却期
+    this.lastInputTime = 0;
     
-    // 重新创建接口，恢复所有功能包括 completer
-    this.rl = readline.createInterface({
-      input: process.stdin,
-      output: process.stdout,
-      prompt: chalk.blue('dbshift> '),
-      completer: this.completer.bind(this),
-      crlfDelay: Infinity,         // 防止Windows系统的回车换行问题
-      history: [],                 // 禁用历史记录，避免箭头键冲突  
-      historySize: 0,              // 设置历史记录大小为0
-      removeHistoryDuplicates: false  // 禁用历史去重
-    });
-    
-    // 重新设置监听器
-    this.setupReadlineListeners();
-    
-    // 添加足够的延迟确保readline完全准备好，避免create命令后的重复输入
+    // 短暂延迟确保 stdin 状态完全重置
     setTimeout(() => {
+      // 重新创建接口，恢复所有功能包括 completer
+      this.rl = readline.createInterface({
+        input: process.stdin,
+        output: process.stdout,
+        prompt: chalk.blue('dbshift> '),
+        completer: this.completer.bind(this),
+        crlfDelay: Infinity,         // 防止Windows系统的回车换行问题
+        history: [],                 // 禁用历史记录，避免箭头键冲突  
+        historySize: 0,              // 设置历史记录大小为0
+        removeHistoryDuplicates: false  // 禁用历史去重
+      });
+      
+      // 重新设置监听器
+      this.setupReadlineListeners();
+      
+      // 显示提示符
       this.rl.prompt();
-    }, 200); // 增加延迟到200ms
+    }, 100); // 100ms 延迟确保状态重置完成
   }
 
 
@@ -999,6 +995,7 @@ CREATE INDEX \`idx_users_email\` ON \`users\` (\`email\`);
     
     return complexCommands.includes(command);
   }
+
 
   async routeCommand(command, args) {
     switch (command) {

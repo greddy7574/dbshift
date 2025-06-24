@@ -146,9 +146,10 @@ jobs:
           echo "### ✨ Core Features" >> $GITHUB_OUTPUT
           echo "- 🗄️ MySQL database migration management" >> $GITHUB_OUTPUT
           echo "- 📜 Detailed migration execution history tracking" >> $GITHUB_OUTPUT
-          echo "- 🎯 Interactive mode with live auto-completion" >> $GITHUB_OUTPUT
+          echo "- 🎯 Interactive mode with live auto-completion and enhanced UX" >> $GITHUB_OUTPUT
           echo "- 🏷️ Clean filename generation (unified sanitization across modes)" >> $GITHUB_OUTPUT
           echo "- ⚡ Short parameter support (-a, -e) for faster typing" >> $GITHUB_OUTPUT
+          echo "- 🔧 Fixed duplicate prompt display in interactive mode (v0.3.29)" >> $GITHUB_OUTPUT
           echo "- ⚙️ Flexible configuration system (env + JS config)" >> $GITHUB_OUTPUT
           echo "- 🔄 Retry mechanism for failed migrations" >> $GITHUB_OUTPUT
           echo "- 🌍 Multi-environment support (dev/staging/prod)" >> $GITHUB_OUTPUT

@@ -7,6 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 DBShift 是一个现代化的 MySQL 数据库迁移工具，灵感来自 Flyway。它提供了简单易用的 CLI 界面，用于数据库版本控制和自动化迁移。项目采用 Node.js + MySQL2 技术栈，设计为全局 npm 包。
 
 ### 版本历史
+- **v0.3.29**: 彻底修复交互模式重复输入和重复提示符问题，优化命令执行后的用户体验
 - **v0.3.28**: 增强交互模式重复输入检测，解决create命令后的双字符问题
 - **v0.3.27**: 修复交互模式文件名双下划线问题，完善 readline 历史记录配置解决箭头键显示错乱
 - **v0.3.26**: 修复文件名多底线问题，添加短参数支持(-a)，提升用户体验
@@ -741,6 +742,67 @@ dbshift> /i                   # 立即過濾到 "i" 開頭的命令
 ────────────────────────────────
   /init                Initialize new project
 ```
+
+### 交互模式重复提示符修复 (v0.3.29)
+
+#### 问题描述
+在执行 `/create` 命令后，用户输入字符时出现重复的提示符显示（如 `dbshift> dbshift>`），影响用户体验。这是由于 `inquirer` 和 `readline` 接口交互时，提示符显示逻辑重复执行导致的。
+
+#### 根本原因分析
+- **handleInput 中的无条件 prompt()**: 在 `handleInput` 方法末尾有一个无条件的 `this.rl.prompt()` 调用
+- **recreateReadlineInterface 中的延迟 prompt()**: 复杂命令（如 `/create`）执行完成后会调用 `recreateReadlineInterface()`，它也会调用 `this.rl.prompt()`
+- **重复调用**: 这导致两次 `prompt()` 调用，产生重复的提示符
+
+#### 修复方案
+```javascript
+// 1. 增加复杂命令检测
+isComplexCommand(command) {
+  const complexCommands = ['/create', '/init'];
+  
+  // 检查是否在执行复杂的config操作
+  if (command === '/config' && this.isExecutingComplexConfig) {
+    return true;
+  }
+  
+  return complexCommands.includes(command);
+}
+
+// 2. 条件性显示提示符
+async handleInput(input) {
+  try {
+    // ... 命令处理逻辑
+    
+    // 只为不调用 recreateReadlineInterface 的简单命令显示提示符
+    if (!this.isComplexCommand(command)) {
+      this.rl.prompt();
+    }
+  } catch (error) {
+    console.error(chalk.red('❌ Error:'), error.message);
+    this.rl.prompt(); // 错误时总是显示提示符
+  }
+}
+
+// 3. 跟踪复杂配置操作
+case 'init':
+  try {
+    this.isExecutingComplexConfig = true;
+    await this.handleConfigInit(initEnv);
+  } finally {
+    this.isExecutingComplexConfig = false;
+  }
+  break;
+```
+
+#### 修复效果
+- ✅ **消除重复提示符**: 不再出现 `dbshift> dbshift>` 的重复显示
+- ✅ **保持会话连续性**: 所有命令执行后正确回到交互模式
+- ✅ **智能提示符控制**: 复杂命令和简单命令分别处理
+- ✅ **向后兼容**: 不影响任何现有功能
+
+#### 技术优势
+- **状态管理**: 通过 `isExecutingComplexConfig` 标志智能识别命令类型
+- **作用域控制**: 将提示符显示逻辑移到正确的作用域
+- **统一错误处理**: 错误情况下始终显示提示符
 
 ### Delete 键双字符输入修复 (v0.3.25)
 

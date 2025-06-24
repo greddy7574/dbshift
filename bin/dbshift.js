@@ -35,6 +35,7 @@ class DBShiftInteractive {
     });
 
     this.currentContext = 'main';
+    this.isExecutingComplexConfig = false; // 标识是否在执行复杂的config操作
     this.commands = this.getAvailableCommands();
     this.lastInput = '';  // 用于防止重复输入
     this.lastInputTime = 0;  // 记录上次输入时间
@@ -126,12 +127,22 @@ class DBShiftInteractive {
       const trimmedInput = line.trim();
       const currentTime = Date.now();
       
-      // 简化但更有效的重复检测
+      // 增强的重复检测，解决create命令后的双字符问题
       const duplicateThreshold = 300; // 300ms 检测窗口
       
-      // 防止重复输入：只检查相同输入在短时间内的重复
+      // 处理冷却期：如果lastInputTime是未来时间（冷却期），等待冷却完成
+      if (this.lastInputTime > currentTime) {
+        // 在冷却期内，忽略所有输入避免重复字符
+        if (trimmedInput.length > 0) {
+          return;
+        }
+      }
+      
+      // 正常的重复检测：相同输入在短时间内重复
       if (this.lastInput === trimmedInput && 
           this.lastInputTime && 
+          this.lastInputTime <= currentTime && // 确保不在冷却期
+          trimmedInput.length > 0 && 
           (currentTime - this.lastInputTime) < duplicateThreshold) {
         // 静默忽略重复输入，不显示消息避免干扰
         return;
@@ -160,9 +171,10 @@ class DBShiftInteractive {
     // 关闭当前接口（现在不会触发退出）
     this.rl.close();
     
-    // 清除重复输入检测状态，防止重新创建后的干扰
+    // 增强重复输入检测：设置较长的冷却期，防止create命令后的重复字符
+    // 清空lastInput但保持较长的冷却时间，确保接下来的输入不被误判为重复
     this.lastInput = '';
-    this.lastInputTime = 0;
+    this.lastInputTime = Date.now() + 300; // 设置未来时间，提供额外的冷却期
     
     // 重新创建接口，恢复所有功能包括 completer
     this.rl = readline.createInterface({
@@ -179,10 +191,10 @@ class DBShiftInteractive {
     // 重新设置监听器
     this.setupReadlineListeners();
     
-    // 添加短暂延迟后再显示提示符，确保readline完全准备好
+    // 添加足够的延迟确保readline完全准备好，避免create命令后的重复输入
     setTimeout(() => {
       this.rl.prompt();
-    }, 50);
+    }, 200); // 增加延迟到200ms
   }
 
 
@@ -295,6 +307,10 @@ class DBShiftInteractive {
     // 完全关闭 readline 输入监听，让 inquirer 完全接管
     this.rl.pause();
     this.rl.removeAllListeners('line');
+    
+    // 清理输入缓冲区状态，避免残留输入影响后续操作
+    this.lastInput = '';
+    this.lastInputTime = 0;
     
     try {
       // 检查 migrations 目录
@@ -959,11 +975,29 @@ CREATE INDEX \`idx_users_email\` ON \`users\` (\`email\`);
       // 路由命令处理
       await this.routeCommand(command, args);
 
+      // 只为不调用 recreateReadlineInterface 的简单命令显示提示符
+      // 复杂命令（/create, /init, /config init）会通过 recreateReadlineInterface 自动显示提示符
+      if (!this.isComplexCommand(command)) {
+        this.rl.prompt();
+      }
+
     } catch (error) {
       console.error(chalk.red('❌ Error:'), error.message);
+      // 错误后显示提示符
+      this.rl.prompt();
     }
+  }
 
-    this.rl.prompt();
+  // 判断是否为需要调用 recreateReadlineInterface 的复杂命令
+  isComplexCommand(command) {
+    const complexCommands = ['/create', '/init'];
+    
+    // 检查是否在执行复杂的config操作
+    if (command === '/config' && this.isExecutingComplexConfig) {
+      return true;
+    }
+    
+    return complexCommands.includes(command);
   }
 
   async routeCommand(command, args) {
@@ -1079,11 +1113,14 @@ CREATE INDEX \`idx_users_email\` ON \`users\` (\`email\`);
 
       case 'init':
         try {
+          this.isExecutingComplexConfig = true; // 标记为复杂配置操作
           const initEnv = this.parseEnvFromArgs(restArgs);
           await this.handleConfigInit(initEnv);
           console.log(chalk.green('✅ Configuration initialized successfully!'));
         } catch (error) {
           console.error(chalk.red('❌ Failed to initialize configuration:'), error.message);
+        } finally {
+          this.isExecutingComplexConfig = false; // 无论成功失败都重置标志
         }
         break;
 

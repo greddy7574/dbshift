@@ -26,6 +26,7 @@ pids
 *.pid
 *.seed
 *.pid.lock
+.dbshift_history
 
 # Logs
 logs
@@ -49,3 +50,6 @@ Thumbs.db
 # Temporary files
 tmp/
 temp/
+
+# Database files
+migrations/

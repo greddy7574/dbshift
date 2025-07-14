@@ -1,392 +1,482 @@
 # DBShift
 
-A simple and powerful MySQL database migration tool inspired by Flyway.
+<div align="center">
 
-✨ **New in v0.3.28**: Enhanced duplicate input detection! Fixed double character issue after create command!
+![DBShift Logo](https://img.shields.io/badge/DBShift-MySQL%20Migration%20Tool-blue?style=for-the-badge)
+[![npm version](https://img.shields.io/npm/v/dbshift.svg?style=flat-square)](https://www.npmjs.com/package/dbshift)
+[![npm downloads](https://img.shields.io/npm/dm/dbshift.svg?style=flat-square)](https://www.npmjs.com/package/dbshift)
+[![GitHub stars](https://img.shields.io/github/stars/greddy7574/dbshift.svg?style=flat-square)](https://github.com/greddy7574/dbshift)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](https://opensource.org/licenses/MIT)
 
-## 🚀 Quick Start
+**A modern, intuitive MySQL database migration tool with dual-mode architecture**
+
+*Inspired by Flyway but built for the modern development workflow*
+
+[🚀 Quick Start](#quick-start) • [📖 Documentation](#documentation) • [💡 Examples](#usage-examples) • [🛠️ Development](#development)
+
+</div>
+
+---
+
+## Overview
+
+DBShift is a powerful MySQL database migration tool that combines the simplicity of traditional CLI tools with a modern, interactive terminal UI. Built with Node.js and featuring innovative dual-mode architecture, it provides an exceptional developer experience for both beginners and advanced users.
+
+### ✨ Key Features
+
+- **🎯 Dual-Mode Architecture**: Choose between interactive mode (React + Ink UI) or traditional CLI
+- **⚡ Instant Auto-completion**: Type `/` to see all commands instantly, with smart filtering
+- **🔄 Perfect Session Persistence**: All commands return to prompt - never lose your workflow
+- **🔢 Author-Based Sequencing**: Independent sequence numbering per developer prevents team conflicts
+- **📜 Rich History Tracking**: Detailed migration execution history with author filtering
+- **⚙️ Flexible Configuration**: Support for both `.env` and multi-environment configs
+- **🏓 Connection Testing**: Built-in database connectivity testing with temporary parameters
+- **🌍 Multi-Environment**: Seamless development, staging, and production environment management
+
+### 🏆 Why Choose DBShift?
+
+| Feature | DBShift | Traditional Tools |
+|---------|---------|-------------------|
+| **User Experience** | Modern terminal UI with instant feedback | Command-line only |
+| **Team Collaboration** | Author-based sequencing prevents conflicts | Global sequence causes merge conflicts |
+| **Learning Curve** | Visual command discovery, zero memorization | Manual reference required |
+| **Workflow** | Session-persistent, continuous workflow | One-shot commands |
+| **Configuration** | Multiple formats with environment support | Single configuration file |
+| **Error Recovery** | Intelligent retry with state management | Manual intervention required |
+
+---
+
+## Quick Start
 
 ### Installation
 
 ```bash
+# Install globally via npm
 npm install -g dbshift
+
+# Or install via GitHub packages
+npm install -g @greddy7574/dbshift
 ```
 
-### Usage
+### Basic Usage
 
-DBShift offers two modes to suit different use cases:
+#### 🎨 Interactive Mode (Recommended)
 
-#### 🎨 Interactive Mode (Recommended for beginners)
+Perfect for daily development work and learning:
 
 ```bash
 # Start interactive mode
 dbshift
 
-# Interactive experience like Claude Code:
-# Type "/" for menu or press Tab for auto-completion
-# /init                Initialize new project
-# /create              Create new migration  
-# /migrate             Run migrations
-# /status              Show migration status
-# /history             Show migration execution history
-# /config              Configuration management
-# /ping                Test database connection
-# /help                Show help menu
-# q                    Quit (session always persists!)
+# Interactive commands (type these in the prompt):
+/                    # 🎯 Show all available commands instantly
+/init               # 🚀 Initialize new project with guided setup
+/create             # 📝 Create migration with interactive form
+/migrate            # ▶️ Execute pending migrations
+/status             # 📊 View migration status and history
+/history            # 📜 Detailed execution history
+/config             # ⚙️ Configuration management
+/ping               # 🏓 Test database connection
+/exit               # 👋 Exit interactive mode
 ```
 
-#### ⚡ CLI Mode (Great for automation and scripts)
+#### ⚡ CLI Mode (Perfect for Automation)
+
+Ideal for scripts, CI/CD, and automation:
 
 ```bash
-# Direct commands
-dbshiftcli init
-dbshiftcli create create_users_table
-dbshiftcli migrate
-dbshiftcli status
-dbshiftcli history              # View migration history
-dbshiftcli history --author=John # Filter by author
-dbshiftcli config
-dbshiftcli ping
+# Project initialization
+dbshift -p -- init
+
+# Migration management
+dbshift -p -- create "add_users_table" --author=john
+dbshift -p -- migrate
+dbshift -p -- status
+
+# Configuration management
+dbshift -p -- config-set --host=localhost --user=root
+dbshift -p -- ping -e production
+
+# History and monitoring
+dbshift -p -- history --author=john
 ```
 
-## 📋 Commands
+---
 
-### Interactive Mode Commands
+## Usage Examples
 
-When you run `dbshift`, you enter interactive mode where you can use these commands:
+### 📚 Complete Workflow Examples
 
-| Command | Description | Example |
-|---------|-------------|---------|
-| `/` | **Auto-completion menu** - Shows all available commands | `/` |
-| `/init` | Initialize new project | `/init` |
-| `/migrate` | Run pending migrations | `/migrate -e production` |
-| `/status` | Show migration status | `/status` |
-| `/history` | Show migration execution history | `/history -a John` |
-| `/create` | Create new migration with guided input | `/create` |
-| `/config` | Configuration management | `/config` |
-| `/ping` | Test database connection | `/ping --host=localhost` |
-| `/clear` | Clear screen | `/clear` |
-| `/help` | Show text-based help menu | `/help` |
-| `q` | Quit interactive mode | `q` |
+#### Example 1: New Project Setup
 
-💡 **Key Features**:
-- **⚡ Live Auto-Completion**: Type "/" to instantly see commands, type "/i" to filter to init commands - NO Enter needed!
-- **🔄 Perfect Session Persistence**: ALL commands (success/error) return to prompt - completely fixed in v0.3.5!
-- **🎯 Claude Code Experience**: Command format shows "command + description" for clarity
-- **📝 Smart Error Handling**: Failed commands show helpful errors and keep session active
-- **🖥️ Context-Aware**: Different command sets for main and config modes
-- **💡 Zero Learning Curve**: Visual command discovery without memorization
-
-✨ **How to Use Interactive Mode**:
-1. Run `dbshift` to start interactive mode
-2. **NEW v0.3.4**: Type `/` to instantly see all commands - no Enter key needed!
-3. **NEW v0.3.4**: Type `/i` to see only commands starting with "/i" (like /init)
-4. **FIXED v0.3.5**: ALL commands now return to prompt - no more unexpected exits!
-5. **NEW v0.3.26**: Use short parameters like `/create test -a jerry` for faster typing!
-6. Type specific commands like `/init`, `/migrate`, `/status`, etc.
-7. All commands (success/error) return to prompt for continuous workflow
-8. Only type `q` when you want to exit
-
-🔧 **Recent Improvements (v0.3.26)**:
-- **🏷️ Clean Filenames**: No more multiple underscores! `"test file"` → `test_file.sql` (not `__test_file__.sql`)
-- **⚡ Short Parameters**: Use `-a jerry` instead of `--author=jerry` for faster typing
-- **🎯 Consistent Experience**: Same parameter format in both CLI and interactive modes
-
-### CLI Mode Commands
-
-For automation and scripting, use the `dbshiftcli` command:
-
-### `dbshiftcli init`
-Initialize schema migration in the current directory. This creates:
-- `migrations/` directory for SQL files
-- Configuration file (`.env` or `schema.config.js`)
-- Example migration file
-
-### `dbshiftcli migrate [options]`
-Run pending migrations in order.
-
-Options:
-- `-e, --env <environment>` - Specify environment (default: development)
-
-### `dbshiftcli status [options]`
-Show the status of all migrations (completed, pending, failed).
-
-Options:
-- `-e, --env <environment>` - Specify environment (default: development)
-
-### `dbshiftcli history [options]`
-Show detailed migration execution history with timestamps and execution details.
-
-Options:
-- `-e, --env <environment>` - Specify environment (default: development)
-- `-a, --author <author>` - Filter history by author name
-
-Examples:
 ```bash
-dbshiftcli history
-dbshiftcli history --author=John
-dbshiftcli history -e production
-```
-
-### `dbshiftcli create <name> [options]`
-Create a new migration file with proper naming convention.
-
-Options:
-- `-a, --author <author>` - Specify author name (default: Admin)
-
-### `dbshiftcli config [options]`
-Show current database configuration.
-
-Options:
-- `-e, --env <environment>` - Specify environment (default: development)
-
-### `dbshiftcli config-init [options]`
-Interactive database configuration setup wizard.
-
-Options:
-- `-e, --env <environment>` - Specify environment (default: development)
-
-### `dbshiftcli config-set [options]`
-Set database configuration values directly from command line.
-
-Options:
-- `-e, --env <environment>` - Specify environment (default: development)
-- `--host <host>` - Database host
-- `--port <port>` - Database port
-- `--user <user>` - Database username
-- `--password <password>` - Database password
-
-### `dbshiftcli ping [options]`
-Test database connection quickly and efficiently.
-
-Options:
-- `-e, --env <environment>` - Specify environment (default: development)
-- `--host <host>` - Database host (temporary test, not saved)
-- `--port <port>` - Database port (temporary test, not saved)
-- `--user <user>` - Database username (temporary test, not saved)
-- `--password <password>` - Database password (temporary test, not saved)
-
-Examples:
-```bash
-# Test current configuration
-dbshift ping
-
-# Test production environment
-dbshift ping -e production
-
-# Test custom connection (without saving)
-dbshift ping --host=localhost --user=root --password=123456
-```
-
-## 📁 Project Structure
-
-```
-your-project/
-├── migrations/
-│   ├── 20241220001_Admin_create_users_table.sql
-│   ├── 20241220002_Admin_add_indexes.sql
-│   └── ...
-├── .env                 # Simple configuration
-└── schema.config.js     # Advanced configuration (optional)
-```
-
-## 🔧 Configuration Management
-
-DBShift provides flexible configuration management with multiple commands:
-
-### Quick Configuration Examples
-
-#### Interactive Mode (Easy for beginners)
-```bash
-# Start interactive mode
+# Start a new project from scratch
 dbshift
 
-# Use the auto-completion feature:
-/                         # Show all available commands
-/config                   # Enter configuration menu  
-/config show              # Show current configuration  
-/config init              # Interactive setup
-/ping                     # Test connection
-# Commands execute and return to prompt automatically!
+# In interactive mode:
+/init                          # Initialize project structure
+# → Creates migrations/ directory and configuration files
+
+/config-init                   # Set up database connection
+# → Interactive wizard guides you through setup
+
+/ping                          # Test the connection
+# → Verifies database connectivity
+
+/create                        # Create your first migration
+# → Name: "create_users_table"
+# → Author: "john"
+# → Generates: 20250711001_john_create_users_table.sql
+
+/migrate                       # Execute the migration
+# → Runs all pending migrations
+
+/status                        # Check migration status
+# → Shows completed: 1, pending: 0
 ```
 
-#### CLI Mode (Great for automation)
+#### Example 2: Team Development Workflow
+
 ```bash
-# Show current configuration
-dbshiftcli config                                    # Development environment
-dbshiftcli config -e production                      # Production environment
+# Alice's work
+dbshift -p -- create "create_users_table" --author=alice
+# → Generates: 20250711001_alice_create_users_table.sql
 
-# Interactive setup (recommended for first-time setup)
-dbshiftcli config-init                               # Create new configuration
-dbshiftcli config-init -e production                 # Setup production environment
+# Bob's parallel work (no conflict!)
+dbshift -p -- create "create_posts_table" --author=bob  
+# → Generates: 20250711001_bob_create_posts_table.sql
 
-# Direct configuration (good for scripts and CI/CD)
-dbshiftcli config-set --host=localhost --user=root --password=123456
-dbshiftcli config-set --host=prod-server --user=prod-user -e production
-dbshiftcli config-set --port=3307                    # Update single value
+# Alice continues
+dbshift -p -- create "add_user_indexes" --author=alice
+# → Generates: 20250711002_alice_add_user_indexes.sql
 
-# Test database connection
-dbshiftcli ping                                      # Test current configuration
-dbshiftcli ping -e production                       # Test production environment
-dbshiftcli ping --host=testhost --user=testuser     # Quick connection test
+# Both can migrate safely
+dbshift -p -- migrate
+# → Executes all migrations in order
 ```
 
-### Configuration Workflow
+#### Example 3: Multi-Environment Deployment
 
-#### For New Users (Interactive Mode)
-1. **Start Interactive Mode**: Run `dbshift`
-2. **Discover Commands**: Type `/` to see all available options
-3. **Setup Configuration**: Use `/config init` for guided setup  
-4. **Test Connection**: Use `/ping` to verify connectivity
-5. **Start Using**: Use `/init`, `/create`, `/migrate` commands
-6. **Continuous Workflow**: Commands complete and return to prompt automatically
+```bash
+# Development environment
+dbshift -p -- config-set --host=dev-db --user=dev_user -e development
+dbshift -p -- migrate -e development
 
-#### For Advanced Users (CLI Mode)
-1. **First Time Setup**: Use `dbshiftcli config-init` for interactive configuration
-2. **Test Connection**: Use `dbshiftcli ping` to verify database connectivity
-3. **View Current Settings**: Use `dbshiftcli config` to see current configuration
-4. **Quick Updates**: Use `dbshiftcli config-set` to change specific values
-5. **Multiple Environments**: Use `-e` flag to manage different environments
+# Staging environment  
+dbshift -p -- config-set --host=staging-db --user=staging_user -e staging
+dbshift -p -- migrate -e staging
 
-## ⚙️ Configuration
+# Production environment
+dbshift -p -- config-set --host=prod-db --user=prod_user -e production
+dbshift -p -- migrate -e production
 
-### Simple Configuration (.env)
+# Check status across environments
+dbshift -p -- status -e development
+dbshift -p -- status -e staging  
+dbshift -p -- status -e production
+```
+
+#### Example 4: Migration History and Monitoring
+
+```bash
+# View complete migration history
+dbshift -p -- history
+
+# Filter by specific author
+dbshift -p -- history --author=alice
+
+# Check production history
+dbshift -p -- history -e production
+
+# Interactive mode for detailed exploration
+dbshift
+/history                       # View all executions
+/history --author=bob          # Filter by author
+/status                        # Current status overview
+```
+
+### 🔧 Configuration Examples
+
+#### Simple Configuration (`.env`)
 
 ```env
+# Database connection settings
 MYSQL_HOST=localhost
 MYSQL_PORT=3306
 MYSQL_USERNAME=root
-MYSQL_PASSWORD=your_password
+MYSQL_PASSWORD=your_secure_password
+MYSQL_DATABASE=your_app_db
 ```
 
-### Advanced Configuration (schema.config.js)
+#### Advanced Multi-Environment Configuration (`schema.config.js`)
 
 ```javascript
 module.exports = {
   development: {
     host: 'localhost',
     port: 3306,
-    user: 'root',
-    password: 'dev_password'
+    user: 'dev_user',
+    password: 'dev_password',
+    database: 'myapp_development'
+  },
+  
+  staging: {
+    host: 'staging-server.example.com',
+    port: 3306,
+    user: 'staging_user',
+    password: process.env.STAGING_DB_PASSWORD,
+    database: 'myapp_staging'
   },
   
   production: {
-    host: process.env.MYSQL_HOST,
-    port: process.env.MYSQL_PORT,
-    user: process.env.MYSQL_USERNAME,
-    password: process.env.MYSQL_PASSWORD
+    host: process.env.PROD_DB_HOST,
+    port: process.env.PROD_DB_PORT || 3306,
+    user: process.env.PROD_DB_USER,
+    password: process.env.PROD_DB_PASSWORD,
+    database: process.env.PROD_DB_NAME
   }
 };
 ```
 
-## 📝 Migration Files
+### 📝 Migration File Examples
 
-Migration files follow a strict naming convention:
-`YYYYMMDDNN_Author_description.sql`
-
-- `YYYYMMDDNN`: Version (Year-Month-Day + sequence)
-- `Author`: Author name
-- `description`: Brief description
-
-### 🔢 Author-Based Sequence Numbering
-
-DBShift v0.2.1+ uses **author-based sequence numbering** to prevent conflicts in team collaboration:
-
-**Traditional Problem:**
-```
-20250621001_Alice_create_users.sql    ← Alice creates first
-20250621002_Bob_create_posts.sql      ← Bob creates second  
-20250621003_Alice_add_index.sql       ← Conflict! Alice can't use 003
-```
-
-**DBShift Solution:**
-```
-20250621001_Alice_create_users.sql    ← Alice: sequence 01
-20250621001_Bob_create_posts.sql      ← Bob: sequence 01 (independent)
-20250621002_Alice_add_index.sql       ← Alice: sequence 02 (continues)
-20250621002_Bob_add_comments.sql      ← Bob: sequence 02 (independent)
-```
-
-**Benefits:**
-- ✅ **No Conflicts**: Each author has independent sequence numbering
-- ✅ **Team Friendly**: Multiple developers can work simultaneously
-- ✅ **Clear Ownership**: Easy to identify who created which migration
-- ✅ **Merge Safe**: Git merges work smoothly without sequence conflicts
-
-### Example Migration
-
-DBShift uses standard SQL syntax that can be executed in any SQL editor:
+#### Basic Table Creation
 
 ```sql
 -- Migration: Create users table
--- Author: Admin
--- Created: 2024-12-20
--- Version: 2024122001
-
--- Create database if it doesn't exist
-CREATE DATABASE IF NOT EXISTS `my_app` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-
--- Use the database
-USE `my_app`;
+-- Author: john
+-- Date: 2025-07-11
 
 -- Create users table
-CREATE TABLE IF NOT EXISTS `users` (
-  `id` BIGINT AUTO_INCREMENT PRIMARY KEY,
-  `username` VARCHAR(50) NOT NULL UNIQUE,
-  `email` VARCHAR(100) NOT NULL UNIQUE,
-  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+CREATE TABLE users (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    username VARCHAR(50) NOT NULL UNIQUE,
+    email VARCHAR(100) NOT NULL UNIQUE,
+    password_hash VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Add index for better performance
-CREATE INDEX `idx_users_email` ON `users` (`email`);
+-- Add indexes for performance
+CREATE INDEX idx_users_email ON users(email);
+CREATE INDEX idx_users_username ON users(username);
 ```
 
-**Key Benefits:**
-- ✅ **Standard SQL**: Works in MySQL Workbench, phpMyAdmin, command line
-- ✅ **No Special Syntax**: Uses standard semicolon (`;`) separators
-- ✅ **Universal Compatibility**: Can be executed anywhere
+#### Complex Schema Changes
 
-## 🔧 Features
+```sql
+-- Migration: Add user profiles and relationships
+-- Author: alice
+-- Date: 2025-07-11
 
-### Core Migration Features
-- **🔄 Perfect Session Persistence**: ALL commands return to prompt - completely fixed in v0.3.5!
-- **⚡ Live Auto-Completion**: Type "/" for instant command display, type "/i" for smart filtering (v0.3.4)
-- **🎯 Claude Code Experience**: Command selector shows "command + description" format for perfect clarity (v0.3.2)
-- **🔢 Author-Based Sequence Numbering**: Independent sequence numbering per author prevents team collaboration conflicts
-- **📝 Standard SQL Syntax**: Compatible with any SQL editor (MySQL Workbench, phpMyAdmin, etc.)
-- **🔄 Retry Mechanism**: Failed migrations can be safely re-executed with automatic state management
-- **📊 Status Tracking**: Complete migration history with execution timestamps
-- **🎯 Template System**: Auto-generated migration templates for different use cases
+-- Create user profiles table
+CREATE TABLE user_profiles (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    first_name VARCHAR(50),
+    last_name VARCHAR(50),
+    bio TEXT,
+    avatar_url VARCHAR(255),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-### Configuration & Setup
-- **⚡ Simple Setup**: Initialize with one command
-- **⚙️ Flexible Configuration**: Support for `.env` and `schema.config.js` formats
-- **🎮 Interactive Setup**: Easy database configuration wizard
-- **🤖 Command-line Configuration**: Direct config updates for automation and CI/CD
-- **🌍 Multiple Environments**: Support for development/staging/production configs
+-- Add new columns to existing users table
+ALTER TABLE users 
+ADD COLUMN email_verified BOOLEAN DEFAULT FALSE,
+ADD COLUMN email_verified_at TIMESTAMP NULL,
+ADD COLUMN last_login_at TIMESTAMP NULL;
 
-### Developer Experience
-- **👥 Team Friendly**: No sequence conflicts in multi-developer environments
-- **🔍 Clear Error Messages**: Detailed error information with solution suggestions
-- **🎨 Colored Output**: Beautiful CLI interface with progress indicators
-- **📋 Flyway Compatible**: Similar workflow and concepts to Flyway
-- **🚀 CI/CD Ready**: GitHub Actions integration with automated testing and publishing
+-- Create indexes
+CREATE INDEX idx_user_profiles_user_id ON user_profiles(user_id);
+CREATE INDEX idx_users_email_verified ON users(email_verified);
+CREATE INDEX idx_users_last_login ON users(last_login_at);
+```
 
-## 📊 Migration Status
+### 🤖 CI/CD Integration Examples
 
-The tool tracks migration status in the `dbshift.migration_history` table:
-- ✅ **Completed**: Migration executed successfully (status=1)
-- ⏳ **Pending**: Migration not yet executed (status=0)
-- 🔄 **Retry Safe**: Failed migrations can be safely retried
+#### GitHub Actions Workflow
 
-### Migration History Table Structure
-- Unique constraint on `(version, author)` prevents duplicates
-- `create_date`: When migration was first attempted
-- `modify_date`: Last execution/update time
-- Failed migrations keep `status=0` and update `modify_date` on retry
+```yaml
+name: Database Migration
 
-## 🛠 Development
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root_password
+          MYSQL_DATABASE: test_db
+        options: >-
+          --health-cmd="mysqladmin ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=3
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+    
+    - name: Install DBShift
+      run: npm install -g dbshift
+    
+    - name: Configure Database
+      run: |
+        dbshift -p -- config-set \
+          --host=127.0.0.1 \
+          --user=root \
+          --password=root_password \
+          --database=test_db
+    
+    - name: Test Database Connection
+      run: dbshift -p -- ping
+    
+    - name: Run Migrations
+      run: dbshift -p -- migrate
+    
+    - name: Verify Migration Status
+      run: dbshift -p -- status
+```
+
+#### Docker Integration
+
+```dockerfile
+FROM node:18-alpine
+
+# Install DBShift
+RUN npm install -g dbshift
+
+# Copy migration files
+COPY migrations/ /app/migrations/
+COPY schema.config.js /app/
+WORKDIR /app
+
+# Migration entrypoint
+ENTRYPOINT ["dbshift", "-p", "--"]
+CMD ["migrate"]
+```
+
+```bash
+# Build and run migrations
+docker build -t my-app-migrations .
+docker run --rm \
+  -e PROD_DB_HOST=production-db.example.com \
+  -e PROD_DB_USER=prod_user \
+  -e PROD_DB_PASSWORD=secure_password \
+  my-app-migrations migrate -e production
+```
+
+---
+
+## Documentation
+
+### 📋 Command Reference
+
+#### Interactive Mode Commands
+
+| Command | Description | Example |
+|---------|-------------|---------|
+| `/` | Show all available commands instantly | `/` |
+| `/init` | Initialize new project with guided setup | `/init` |
+| `/create` | Create migration with interactive form | `/create` |
+| `/migrate` | Execute pending migrations | `/migrate -e production` |
+| `/status` | View migration status and statistics | `/status` |
+| `/history` | Show detailed execution history | `/history --author=john` |
+| `/config` | Configuration management menu | `/config` |
+| `/config-init` | Interactive configuration wizard | `/config-init` |
+| `/config-set` | Direct configuration editor | `/config-set` |
+| `/ping` | Test database connection | `/ping --host=testdb` |
+| `/about` | Show version and system information | `/about` |
+| `/help` | Display help information | `/help` |
+| `/exit` | Exit interactive mode | `/exit` |
+
+#### CLI Mode Commands
+
+| Command | Description | Options |
+|---------|-------------|---------|
+| `init` | Initialize project structure | - |
+| `create <name>` | Create new migration file | `-a, --author` |
+| `migrate` | Execute pending migrations | `-e, --env` |
+| `status` | Show migration status | `-e, --env` |
+| `history` | Show execution history | `-e, --env`, `-a, --author` |
+| `config` | Display current configuration | `-e, --env` |
+| `config-init` | Interactive configuration setup | `-e, --env` |
+| `config-set` | Set configuration values | `--host`, `--port`, `--user`, `--password`, `-e, --env` |
+| `ping` | Test database connection | `-e, --env`, `--host`, `--port`, `--user`, `--password` |
+
+### 🏗️ Project Structure
+
+After initialization, your project will have this structure:
+
+```
+your-project/
+├── migrations/                          # Migration SQL files
+│   ├── 20250711001_john_create_users.sql
+│   ├── 20250711002_john_add_indexes.sql
+│   └── 20250711001_alice_create_posts.sql
+├── .env                                # Simple configuration
+├── schema.config.js                    # Advanced multi-env configuration
+└── .dbshift_history                    # Session command history (auto-managed)
+```
+
+### 📁 Migration File Naming Convention
+
+**Format**: `YYYYMMDDNN_Author_description.sql`
+
+- **YYYYMMDD**: Date (Year-Month-Day)
+- **NN**: Sequence number (per author, per day)
+- **Author**: Developer name
+- **description**: Brief description (snake_case)
+
+**Examples**:
+- `20250711001_john_create_users_table.sql`
+- `20250711002_john_add_user_indexes.sql`
+- `20250711001_alice_create_posts_table.sql` ← No conflict with John's 001!
+
+### 🔢 Author-Based Sequencing
+
+DBShift's innovative author-based sequencing eliminates team collaboration conflicts:
+
+**Traditional Problem**:
+```
+20250711001_alice_feature_a.sql    ← Alice commits first
+20250711002_bob_feature_b.sql      ← Bob commits second
+20250711003_alice_feature_c.sql    ← Merge conflict! 003 already used
+```
+
+**DBShift Solution**:
+```
+20250711001_alice_feature_a.sql    ← Alice: sequence 001
+20250711001_bob_feature_b.sql      ← Bob: sequence 001 (independent!)
+20250711002_alice_feature_c.sql    ← Alice: sequence 002 (continues)
+20250711002_bob_feature_d.sql      ← Bob: sequence 002 (independent!)
+```
+
+**Benefits**:
+- ✅ Zero merge conflicts on migration file names
+- ✅ Independent development workflows
+- ✅ Clear author attribution
+- ✅ Parallel development support
+
+---
+
+## Development
+
+### 🛠️ Setting Up Development Environment
 
 ```bash
 # Clone the repository
@@ -398,155 +488,126 @@ npm install
 
 # Run tests
 npm test
+
+# Run test coverage
 npm run test:coverage
 
+# Link for local testing
+npm link
+
 # Test locally
-node bin/dbshift.js --help
+dbshift --help
+dbshift
+
+# Unlink when done
+npm unlink -g dbshift
 ```
 
-## 🚀 CI/CD & Publishing
-
-### Automated Publishing Workflow
-
-DBShift uses GitHub Actions for automated testing and publishing:
-
-#### 🧪 Continuous Testing
-- **Trigger**: Push to `main`/`develop` branches, or Pull Requests
-- **Node.js Versions**: 16, 18, 20 (matrix testing)
-- **Checks**: Unit tests, code quality, security audit
-- **Coverage**: Automated coverage reporting via Codecov
-
-#### 📦 Automated Publishing
-- **Trigger**: Push git tags matching `v*` pattern (e.g., `v0.3.0`)
-- **Dual Registry**: Publishes to both NPM and GitHub Packages
-- **GitHub Release**: Auto-creates release with detailed notes
-
-### Manual Release Process
+### 🧪 Testing
 
 ```bash
-# 1. Update version and test
-npm version patch  # or minor/major
+# Run all tests
 npm test
 
-# 2. Push with tags to trigger CI/CD
+# Run specific test suites
+npm run test:unit
+npm run test:integration
+
+# Watch mode for development
+npm run test:watch
+
+# Generate coverage report
+npm run test:coverage
+```
+
+### 🏗️ Architecture
+
+DBShift is built with modern technologies:
+
+- **Frontend**: React + Ink for terminal UI
+- **CLI**: Commander.js for command parsing
+- **Database**: MySQL2 with Promise support
+- **Configuration**: dotenv + custom JS configs
+- **Testing**: Jest with comprehensive coverage
+- **CI/CD**: GitHub Actions with automated publishing
+
+### 📦 Publishing
+
+The project uses automated publishing via GitHub Actions:
+
+```bash
+# Update version
+npm version patch  # or minor/major
+
+# Push with tags
 git push origin main --tags
 
-# 3. Monitor GitHub Actions
-# Visit: https://github.com/greddy7574/dbshift/actions
+# GitHub Actions automatically:
+# 1. Runs tests on Node.js 16, 18, 20
+# 2. Publishes to NPM Registry
+# 3. Publishes to GitHub Packages
+# 4. Creates GitHub Release
 ```
 
-### Package Installation Options
+---
 
-**NPM Registry (recommended):**
-```bash
-npm install -g dbshift
-```
+## Requirements
 
-**GitHub Package Registry:**
-```bash
-npm install -g @greddy7574/dbshift
-```
+- **Node.js**: >= 14.0.0
+- **Database**: MySQL 5.7+ or 8.0+
+- **Package Manager**: npm or yarn
 
-## ⚠️ Requirements
+---
 
-- Node.js >= 14.0.0
-- MySQL database
-- npm or yarn
+## Contributing
 
-## 📄 License
+We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
 
-MIT License - see LICENSE file for details.
+### 🤝 How to Contribute
 
-## 📚 Version History
+1. **Fork** the repository
+2. **Create** a feature branch (`git checkout -b feature/amazing-feature`)
+3. **Commit** your changes (`git commit -m 'Add amazing feature'`)
+4. **Push** to the branch (`git push origin feature/amazing-feature`)
+5. **Open** a Pull Request
 
-### v0.3.28 (Latest)
-- 🎯 **Duplicate Input Detection**: Enhanced logic to prevent double character input after commands
-- 🔧 **Readline State Management**: Improved state cleanup during interface recreation
-- ⚡ **Input Responsiveness**: Added timing delays to ensure readline stability
-- 📖 **Bug Fix**: Resolved "s" displaying as "ss" after /create command execution
+### 🐛 Reporting Issues
 
-### v0.3.27
-- 🔧 **Interactive Mode Filename Fix**: Eliminated double underscores in generated migration filenames
-- 🎯 **Arrow Key Display Fix**: Enhanced readline configuration to prevent display corruption
-- ✅ **Unified Filename Generation**: Interactive and CLI modes now use identical sanitization logic
-- 📖 **Improved Stability**: More robust interactive mode experience
+Please use our [Issue Template](.github/ISSUE_TEMPLATE.md) when reporting bugs or requesting features.
 
-### v0.3.26
-- 🏷️ **Short Parameter Support**: Added `-a` shorthand for `--author` in both CLI and interactive modes
-- 📁 **Filename Sanitization**: Enhanced logic to prevent multiple underscores in migration filenames
-- ⚡ **Performance Improvements**: Optimized parameter parsing and validation
+---
 
-### v0.3.25
-- 📜 **History Command**: New `history` command shows detailed migration execution records with author filtering
-- 🔍 **Enhanced Tracking**: Comprehensive migration audit trail with timestamps and status
-- 🎯 **Author Filtering**: View history by specific developer with `--author=John` parameter
-- 🖥️ **Dual Mode Support**: History command works in both interactive and CLI modes
+## Roadmap
 
-### v0.3.5
-- 🔄 **Perfect Session Persistence**: Fixed ALL commands to return to prompt - no more unexpected exits!
-- 🛠️ **Unified Error Handling**: All commands now use consistent ErrorHandler pattern
-- ✅ **Complete Fix Verification**: `/status`, `/create`, `/init` - all commands now work perfectly
-- 📖 **Comprehensive Documentation**: Updated guides and architecture documentation
+### 🚀 Upcoming Features
 
-### v0.3.4
-- ⚡ **Live Auto-Completion**: Type "/" to instantly show commands, type "/i" to filter to specific commands
-- 🎯 **Real-time Command Discovery**: No need to press Enter - commands appear as you type
-- 🔍 **Smart Filtering**: Partial commands like "/i" automatically filter to matching options
-- 📖 **Enhanced Documentation**: Updated guides reflecting live auto-completion features
+- **PostgreSQL Support**: Expand beyond MySQL
+- **Migration Rollback**: Safe rollback functionality
+- **Dry Run Mode**: Test migrations without execution
+- **Web UI**: Browser-based migration management
+- **Schema Diff**: Compare database schemas
+- **Integration Plugins**: ORM integrations (Sequelize, TypeORM, etc.)
 
-### v0.3.0-v0.3.3
-- 🎯 **Interactive Auto-Completion**: Type "/" for smart command suggestions and guided operations
-- 🧹 **Enhanced User Experience**: Intuitive menus and context-aware help system
-- 🔧 **Improved Error Handling**: Better validation and graceful error recovery
-- 📖 **Updated Documentation**: Complete guides reflecting new interactive features
+---
 
-### v0.2.1
-- 🔢 **Author-Based Sequence Numbering**: Resolves team collaboration conflicts
-- 📝 **Simplified SQL Processing**: Standard SQL syntax compatible with any editor
-- 🧪 **Enhanced Testing**: Comprehensive test coverage for new features
-- 📖 **Documentation Updates**: Complete guides and API documentation
+## License
 
-### v0.2.0
-- ⚙️ **Configuration Management**: `config`, `config-init`, `config-set` commands
-- 🌍 **Multi-Environment Support**: Development, staging, production configs
-- 🔄 **Retry Mechanism**: Safe re-execution of failed migrations
-- 🚀 **CI/CD Integration**: GitHub Actions automated testing and publishing
+MIT License - see [LICENSE](LICENSE) file for details.
 
-### v0.1.x
-- 📦 **Initial Release**: Basic migration functionality
-- 🎯 **Core Commands**: `init`, `migrate`, `status`, `create`
-- 💾 **Database Tracking**: Migration history table
-- 📁 **Project Structure**: Standard migration file organization
+---
 
-## 🆚 Comparison with Flyway
+## Acknowledgments
 
-| Feature | DBShift | Flyway |
-|---------|-------------|---------|
-| Language | Node.js | Java |
-| Database | MySQL (PostgreSQL planned) | Multiple databases |
-| Setup | `npm install -g dbshift` | Java + Flyway installation |
-| Configuration | `.env` or `schema.config.js` | `flyway.conf` properties |
-| Team Collaboration | Author-based sequence numbering | Global sequence numbering |
-| SQL Compatibility | Standard SQL (any editor) | Flyway-specific syntax |
-| Learning Curve | Simple | Moderate |
-| CI/CD Integration | GitHub Actions built-in | Manual setup |
+- Inspired by [Flyway](https://flywaydb.org/) for database migration concepts
+- Built with [Ink](https://github.com/vadimdemedes/ink) for beautiful terminal interfaces
+- Powered by [MySQL2](https://github.com/sidorares/node-mysql2) for reliable database connectivity
 
-## 🚀 Roadmap
+---
 
-### Short Term (v0.3.x)
-- [ ] PostgreSQL support
-- [ ] Migration rollback functionality
-- [ ] Dry run mode for safe testing
-- [ ] Migration validation and linting
+<div align="center">
 
-### Medium Term (v0.4.x+)
-- [ ] Web UI for migration management
-- [ ] Database diff and schema comparison
-- [ ] Automated migration generation
-- [ ] Integration with popular ORMs
+**Made with ❤️ by the DBShift team**
 
-### Long Term
-- [ ] Multi-database support (MongoDB, SQLite)
-- [ ] Cloud deployment templates
-- [ ] Enterprise features and SSO
-- [ ] Migration analytics and reporting
+[⭐ Star us on GitHub](https://github.com/greddy7574/dbshift) • [📦 View on NPM](https://www.npmjs.com/package/dbshift) • [📚 Documentation](https://github.com/greddy7574/dbshift/wiki)
+
+</div>

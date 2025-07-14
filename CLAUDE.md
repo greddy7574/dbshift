@@ -7,9 +7,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 DBShift 是一个现代化的 MySQL 数据库迁移工具，灵感来自 Flyway。项目采用创新的双模式架构：交互模式（基于 React + Ink）和 CLI 模式（基于 Commander.js），为不同使用场景提供最佳的用户体验。
 
 ### 核心特性
-- 🎯 **双模式架构**: 交互模式（现代终端 UI）+ CLI 模式（传统命令行）
-- ⚡ **即时自动补全**: 输入"/"立即显示命令，支持智能过滤和 Tab 补全
-- 🔄 **完美会话持久性**: 所有命令执行后保持交互状态，统一错误处理机制
+- 🎯 **双模式架构**: 交互模式（React + Ink 终端 UI）+ CLI 模式（Commander.js）
+- ⚡ **React 交互界面**: 基于 Ink 的现代终端用户界面，支持对话框和实时反馈
+- 🔄 **统一错误处理**: ErrorHandler 提供一致的错误处理机制
 - 🔢 **作者分组序号**: 每个开发者独立的序号系统，避免团队协作冲突
 - 📜 **丰富历史功能**: 详细的迁移执行历史，支持按作者过滤和多环境查看
 - ⚙️ **灵活配置管理**: 支持 .env 和 schema.config.js 两种配置方式
@@ -19,26 +19,27 @@ DBShift 是一个现代化的 MySQL 数据库迁移工具，灵感来自 Flyway�
 ## 技术架构
 
 ### 技术栈
-- **前端**: React (^17.0.2) + Ink (^3.2.0) - 现代终端 UI 框架
-- **CLI**: Commander.js (^14.0.0) - 命令行参数解析
+- **交互 UI**: React (^17.0.2) + Ink (^3.2.0) - 现代终端 UI 框架
+- **CLI**: Commander.js (^14.0.0) - 命令行参数解析和路由
 - **数据库**: MySQL2 (^3.11.0) - Promise-based MySQL 驱动
-- **交互**: Inquirer (^8.2.6) - 交互式命令行界面
+- **用户交互**: Inquirer (^8.2.6) - 对话框和表单交互
 - **样式**: Chalk (4.1.2) - 终端颜色输出
 - **配置**: dotenv (^16.0.1) - 环境变量管理
 - **测试**: Jest (^30.0.2) - 测试框架
-- **编译**: Babel - 支持 React/JSX 编译
+- **编译**: Babel - React/JSX 支持
 
 ### 项目结构
+
 ```
 dbshift/
 ├── bin/
-│   └── dbshift.js                    # 主入口（双模式路由）
+│   └── dbshift.js                    # 主入口（双模式路由器）
 ├── lib/
 │   ├── cli/
 │   │   └── CLIRunner.js              # CLI 模式命令路由器
-│   ├── commands/                     # 命令处理器
+│   ├── commands/                     # 业务命令处理器
 │   │   ├── config/                   # 配置管理命令组
-│   │   │   ├── index.js              # 显示配置
+│   │   │   ├── index.js              # 显示当前配置
 │   │   │   ├── init.js               # 交互式配置初始化
 │   │   │   └── set.js                # 命令行配置设置
 │   │   ├── create.js                 # 创建迁移文件
@@ -47,17 +48,17 @@ dbshift/
 │   │   ├── migrate.js                # 执行迁移
 │   │   ├── status.js                 # 迁移状态检查
 │   │   └── test-connection.js        # 数据库连接测试
-│   ├── core/                         # 核心功能模块
-│   │   ├── config.js                 # 配置管理
+│   ├── core/                         # 核心业务模块
+│   │   ├── config.js                 # 配置管理和加载
 │   │   ├── database.js               # 数据库连接和 SQL 执行
 │   │   └── migration.js              # 迁移文件管理和执行逻辑
-│   ├── templates/                    # 模板文件
+│   ├── templates/                    # 文件模板
 │   │   ├── migration.sql             # 迁移文件模板
 │   │   └── schema.config.js          # 配置文件模板
-│   ├── ui/                           # 交互模式 UI 组件
-│   │   ├── InteractiveApp.js         # 主交互应用（React + Ink）
-│   │   ├── components/               # React 组件
-│   │   │   ├── Layout.js             # 布局组件
+│   ├── ui/                           # React + Ink 交互界面
+│   │   ├── InteractiveApp.js         # 主交互应用组件
+│   │   ├── components/               # React UI 组件
+│   │   │   ├── Layout.js             # 布局组件（Logo、输入框等）
 │   │   │   └── dialogs/              # 对话框组件
 │   │   │       ├── ConfigDialog.js
 │   │   │       ├── ConfigInitDialog.js
@@ -65,14 +66,14 @@ dbshift/
 │   │   │       ├── CreateDialog.js
 │   │   │       └── InitDialog.js
 │   │   ├── hooks/                    # React Hooks
-│   │   │   ├── useCommandHistory.js
-│   │   │   └── useProjectStatus.js
+│   │   │   ├── useCommandHistory.js  # 命令历史管理
+│   │   │   └── useProjectStatus.js   # 项目状态管理
 │   │   └── utils/
-│   │       └── CommandProcessor.js
-│   └── utils/                        # 工具类
-│       ├── connectionTester.js       # 数据库连接测试
-│       ├── errorHandler.js           # 统一错误处理
-│       ├── errors.js                 # 自定义错误类
+│   │       └── CommandProcessor.js   # 命令处理逻辑
+│   └── utils/                        # 工具类库
+│       ├── connectionTester.js       # 数据库连接测试工具
+│       ├── errorHandler.js           # 统一错误处理机制
+│       ├── errors.js                 # 自定义错误类定义
 │       ├── fileUtils.js              # 文件操作和序号生成
 │       ├── logger.js                 # 彩色日志输出
 │       ├── progress.js               # 进度指示器
@@ -81,57 +82,111 @@ dbshift/
 
 ## 核心架构设计
 
-### 双模式架构
+### 双模式入口设计
 
-#### 交互模式 (`bin/dbshift.js`)
+#### 主入口 (`bin/dbshift.js`)
 ```javascript
-// 主交互应用 - 基于 React + Ink
-class DBShiftApp extends React.Component {
-  // 核心状态管理
-  - 命令历史记录（会话级别）
-  - 实时命令建议和过滤
-  - 对话框状态管理
-  - 键盘事件处理（箭头键、Tab、Esc）
-  
-  // 主要功能
-  showCommandSelector()     // 即时命令选择器
-  handleInput(input)        // 用户输入处理
-  executeCommand(command)   // 命令执行路由
-  updateSuggestions()       // 实时建议更新
+// 命令行参数检测
+if (args.includes('-p')) {
+    // CLI 模式：dbshift -p -- command args
+    executeCommandLine(command);
+} else {
+    // 交互模式：React + Ink 应用
+    startInteractiveMode();
+}
+```
+
+**路由逻辑**:
+- **交互模式**: 直接启动 `startInteractiveMode()` - React + Ink 应用
+- **CLI 模式**: 通过 `-p --` 参数触发 `executeCommandLine()` - Commander.js 处理
+- **帮助模式**: `-h`、`--help` 显示使用说明
+
+#### 交互模式 (`lib/ui/InteractiveApp.js`)
+```javascript
+// React + Ink 应用架构
+function startInteractiveMode() {
+  // TTY 检查和环境初始化
+  // 渲染主 React 组件
+  render(<DBShiftApp />);
+}
+
+// 主应用组件
+function DBShiftApp() {
+  // useState hooks 管理应用状态
+  // useInput hook 处理用户输入
+  // 对话框状态管理
+  // 命令执行和反馈显示
 }
 ```
 
 **特性**:
-- **即时自动补全**: 输入"/"立即显示所有命令，支持智能过滤
-- **Tab 自动补全**: readline completer 函数提供真正的 Tab 补全体验
-- **会话持久性**: 所有命令执行后保持交互状态，不会退出
-- **对话框交互**: 复杂命令（如 create、config）使用对话框引导
-- **键盘导航**: 支持箭头键历史记录导航和建议列表导航
+- **React 组件架构**: 使用 useState、useEffect 等 Hooks
+- **对话框系统**: 复杂命令使用专门的对话框组件
+- **实时反馈**: Ink 提供的终端 UI 更新
+- **TTY 检测**: 自动回退到 CLI 模式（非终端环境）
 
 #### CLI 模式 (`lib/cli/CLIRunner.js`)
 ```javascript
-// CLI 命令路由器
-function executeCommandLine(commandLine) {
-  // 解析命令和参数
-  // 路由到对应的命令处理器
-  // 统一错误处理
+// Commander.js 程序配置
+function executeCommandLine(command) {
+  const { program } = require('commander');
+  
+  // 注册所有命令
+  program.command('init').action(initCommand);
+  program.command('create <name>').action(createCommand);
+  program.command('migrate').action(migrateCommand);
+  // ...其他命令
+  
+  // 解析和执行
+  program.parse(['node', 'dbshift', ...commandArgs]);
 }
 ```
 
 **特性**:
-- **传统 CLI 界面**: 适合脚本和自动化
-- **参数解析**: 支持长参数 (--author=john) 和短参数 (-a john)
-- **批处理友好**: 可在 CI/CD 中使用
+- **Commander.js 路由**: 标准的 CLI 命令解析
+- **参数验证**: 自动处理必需参数和选项
+- **批处理友好**: 适合脚本和 CI/CD 环境
+- **错误退出**: 失败时正确设置退出码
 
 ### 配置管理系统
 
-#### 多格式支持
-1. **schema.config.js** - 高级配置，支持多环境
+#### 配置加载策略 (`lib/core/config.js`)
+```javascript
+class Config {
+  static getCurrentConfig(env = 'development') {
+    // 1. 优先加载 schema.config.js（多环境）
+    if (FileUtils.exists('schema.config.js')) {
+      const config = require('./schema.config.js');
+      return config[env] || config;
+    }
+    
+    // 2. 回退到 .env 文件（简单配置）
+    if (FileUtils.exists('.env')) {
+      dotenv.config();
+      return extractFromEnv();
+    }
+    
+    // 3. 使用环境变量（生产环境）
+    return extractFromEnv();
+  }
+}
+```
+
+**配置格式支持**:
+
+1. **schema.config.js** - 多环境配置
 ```javascript
 module.exports = {
-  development: { host: 'localhost', port: 3306, user: 'root', password: 'dev' },
-  staging: { host: 'staging-host', port: 3306, user: 'root', password: 'staging' },
-  production: { host: 'prod-host', port: 3306, user: 'root', password: 'prod' }
+  development: { 
+    host: 'localhost', port: 3306, 
+    user: 'root', password: 'dev',
+    database: 'myapp_dev' 
+  },
+  production: { 
+    host: 'prod-host', port: 3306,
+    user: 'root', password: 'prod',
+    database: 'myapp_prod' 
+  }
 };
 ```
 
@@ -141,64 +196,46 @@ MYSQL_HOST=localhost
 MYSQL_PORT=3306
 MYSQL_USERNAME=root
 MYSQL_PASSWORD=password
+MYSQL_DATABASE=myapp
 ```
-
-#### 配置加载优先级
-1. `schema.config.js` - 优先加载，支持多环境
-2. `.env` - 回退选项，简单配置
-3. 环境变量 - 生产环境覆盖
 
 ### 迁移文件管理
 
-#### 文件命名规范
+#### 文件命名系统 (`lib/utils/fileUtils.js`)
 ```
-YYYYMMDDNN_Author_description.sql
+格式: YYYYMMDDNN_Author_description.sql
+示例: 20250714001_Greddy_create_users_table.sql
 ```
 
-**示例**:
-- `20250711001_Greddy_create_users_table.sql`
-- `20250711002_Greddy_add_email_index.sql`
-- `20250711001_Jerry_create_posts_table.sql` (不同作者可使用相同序号)
-
-#### 作者分组序号机制
-**解决的问题**: 传统的全局序号在多人协作时容易产生冲突
-
-**新的解决方案**: 每个作者独立的序号系统
+**作者分组序号机制**:
 ```javascript
-// FileUtils.generateSequence(dir, date, author)
-// 1. 按日期和作者过滤文件
-// 2. 查找该作者当天的最大序号
-// 3. 返回 max + 1
+// 每个作者独立序号，避免冲突
+generateSequence(dir, date, author) {
+  // 1. 扫描同日期、同作者的文件
+  // 2. 解析序号，找出最大值
+  // 3. 返回 max + 1
+}
+
+// 示例：同一天不同作者可用相同序号
+20250714001_Alice_feature_a.sql  // Alice 的第 1 个
+20250714001_Bob_feature_b.sql    // Bob 的第 1 个（无冲突）
+20250714002_Alice_feature_c.sql  // Alice 的第 2 个
 ```
 
-**优势**:
-- ✅ 消除团队协作中的序号冲突
-- ✅ Git merge 更加顺畅
-- ✅ 清晰的作者责任划分
-- ✅ 向后兼容现有文件
+#### 迁移模板系统 (`lib/templates/migration.sql`)
+```sql
+-- Migration: {{DESCRIPTION}}
+-- Author: {{AUTHOR}}
+-- Created: {{DATE}}
+-- Version: {{VERSION}}
 
-### 历史记录功能
+-- Create database if it doesn't exist
+CREATE DATABASE IF NOT EXISTS `{{DATABASE_NAME}}` DEFAULT CHARACTER SET utf8mb4;
+USE `{{DATABASE_NAME}}`;
 
-#### 会话级别历史记录
-```javascript
-// 每次启动时清空历史记录，开始全新会话
-const loadHistory = () => {
-  // 清空 .dbshift_history 文件
-  // 返回空数组，开始新会话
-};
-
-// 会话内累积，保持完整顺序（包括重复命令）
-const saveHistory = (newHistory) => {
-  // 不去重，保持输入顺序
-  // 只限制大小到 MAX_HISTORY_SIZE
-};
+-- Add your SQL statements here
+-- 支持标准 SQL 语法和注释
 ```
-
-**特性**:
-- **会话独立**: 每次启动都是干净的历史记录会话
-- **完整累积**: 会话内所有命令都保留，包括重复命令
-- **箭头键导航**: 支持 ↑↓ 箭头键浏览历史记录
-- **智能优先级**: 历史记录导航优先于建议列表导航
 
 ### 数据库架构
 
@@ -218,19 +255,48 @@ CREATE TABLE `dbshift`.`migration_history` (
 );
 ```
 
-#### 失败重试机制
-- 使用 `(version, author)` 唯一约束防止重复记录
-- 执行失败时记录保持 `status=0`，可重新执行
-- 重新执行时更新 `modify_date` 和重置状态
+**失败重试机制**:
+- 唯一约束 `(version, author)` 防止重复记录
+- 失败时 `status=0`，可重新执行
+- 成功时更新 `status=1` 和 `modify_date`
+
+### 错误处理系统
+
+#### 统一错误处理 (`lib/utils/errorHandler.js`)
+```javascript
+class ErrorHandler {
+  static async executeWithErrorHandling(fn) {
+    try {
+      await fn();
+      // 交互模式：不退出进程
+      if (!process.env.DBSHIFT_INTERACTIVE_MODE) {
+        process.exit(0);
+      }
+    } catch (error) {
+      const exitCode = this.handle(error);
+      if (!process.env.DBSHIFT_INTERACTIVE_MODE) {
+        process.exit(exitCode);  // CLI 模式：退出进程
+      } else {
+        throw error;             // 交互模式：抛出给 React 处理
+      }
+    }
+  }
+}
+```
+
+**模式区分**:
+- **CLI 模式**: 错误时 `process.exit()` 设置正确退出码
+- **交互模式**: 错误时抛出异常，由 React 组件捕获并显示
 
 ## 开发指南
 
 ### 本地开发测试
+
 ```bash
-# 交互模式测试
+# 交互模式开发测试
 node bin/dbshift.js
 
-# CLI 模式测试
+# CLI 模式开发测试
 node bin/dbshift.js -p -- init
 node bin/dbshift.js -p -- create "test_migration" --author="developer"
 node bin/dbshift.js -p -- migrate
@@ -242,7 +308,7 @@ node bin/dbshift.js -p -- ping
 
 ### 全局安装测试
 ```bash
-npm link                    # 本地链接到全局
+npm link                    # 链接到全局
 dbshift                     # 测试交互模式
 dbshift -p -- status       # 测试 CLI 模式
 npm unlink -g dbshift      # 取消链接
@@ -250,77 +316,92 @@ npm unlink -g dbshift      # 取消链接
 
 ### 关键开发要点
 
-#### 1. 交互模式开发
-- **环境变量标识**: 使用 `DBSHIFT_INTERACTIVE_MODE=true` 区分交互和 CLI 模式
-- **错误处理**: 交互模式中 throw error，CLI 模式中 process.exit()
-- **状态管理**: 使用 React hooks 管理复杂状态
-- **事件处理**: useInput hook 处理键盘事件
-
-#### 2. 命令处理器开发
+#### 1. 添加新命令
 ```javascript
-// 统一错误处理模式
-async function commandHandler(options) {
+// 1. 创建命令处理器: lib/commands/newcommand.js
+async function newCommand(options) {
   await ErrorHandler.executeWithErrorHandling(async () => {
-    try {
-      // 命令逻辑
-    } catch (error) {
-      if (error.code === 'ECONNREFUSED') {
-        throw new DatabaseError('Database connection failed', error);
-      }
-      throw error;
+    // 命令逻辑实现
+  });
+}
+
+// 2. 注册 CLI 路由: lib/cli/CLIRunner.js
+program
+  .command('newcommand')
+  .description('Command description')
+  .action(newCommand);
+
+// 3. 添加交互模式支持: lib/ui/InteractiveApp.js
+// 在对话框或命令处理中集成
+```
+
+#### 2. React 组件开发
+```javascript
+// 使用 Ink 组件和 React Hooks
+const { Box, Text, useInput } = require('ink');
+const { useState, useEffect } = require('react');
+
+function NewDialog({ onSubmit, onCancel }) {
+  const [input, setInput] = useState('');
+  
+  useInput((input, key) => {
+    if (key.return) {
+      onSubmit(input);
+    }
+    if (key.escape) {
+      onCancel();
     }
   });
+  
+  return (
+    <Box flexDirection="column">
+      <Text>Input something:</Text>
+      <Text>{input}</Text>
+    </Box>
+  );
 }
 ```
 
-#### 3. 配置管理开发
-- **多环境支持**: 通过 `-e` 参数指定环境
-- **配置验证**: 使用 Validator.js 验证配置完整性
-- **连接测试**: ConnectionTester.js 提供统一的连接测试逻辑
-
-#### 4. 文件操作开发
+#### 3. 配置扩展
 ```javascript
-// 文件名清理规则
-const sanitizedName = name
-  .toLowerCase()
-  .replace(/[^a-zA-Z0-9\-]/g, '_')  // 保留连字符，其他转下划线
-  .replace(/_{2,}/g, '_')           // 多个连续下划线合并为一个
-  .replace(/^_+|_+$/g, '');         // 移除开头和结尾的下划线
+// 在 lib/core/config.js 中扩展配置加载
+static getCurrentConfig(env) {
+  // 添加新的配置格式支持
+  if (FileUtils.exists('newconfig.json')) {
+    return JSON.parse(fs.readFileSync('newconfig.json'));
+  }
+  // 现有逻辑...
+}
 ```
 
 ## 用户使用指南
 
 ### 交互模式使用
+
 ```bash
 # 启动交互模式
 dbshift
 
-# 交互式命令
-/                          # 显示所有可用命令
-/init                      # 项目初始化（对话框引导）
-/create                    # 创建迁移（对话框引导）
-/migrate                   # 执行待处理的迁移
-/status                    # 查看迁移状态
-/history                   # 查看迁移执行历史
-/history --author=John     # 按作者过滤历史
-/config                    # 配置管理（对话框选择环境）
-/config-init               # 交互式配置初始化
-/config-set                # 配置编辑器
-/ping                      # 测试数据库连接
-/about                     # 显示版本信息
-/help                      # 显示帮助信息
-q                          # 退出交互模式
+# 主要功能
+- 项目初始化对话框
+- 创建迁移文件向导
+- 配置管理界面
+- 实时状态显示
+- 错误反馈和重试
 ```
 
-**交互技巧**:
-- **即时补全**: 输入 "/" 立即显示所有命令
-- **智能过滤**: 输入 "/i" 自动过滤到 "/init" 等相关命令
-- **Tab 补全**: 按 Tab 键自动补全命令
-- **历史导航**: 在空输入框按 ↑↓ 箭头键浏览历史命令
-- **建议切换**: 有建议时按 Esc 关闭建议，然后可用箭头键浏览历史
+**交互模式特性**:
+- **对话框驱动**: 复杂操作通过表单对话框引导
+- **实时反馈**: 命令执行状态实时更新
+- **错误恢复**: 错误后自动返回主界面
+- **键盘导航**: ESC 取消，回车确认，箭头键选择
 
 ### CLI 模式使用
+
 ```bash
+# 基本命令格式
+dbshift -p -- <command> [options]
+
 # 项目管理
 dbshift -p -- init
 dbshift -p -- create "create_users_table" --author=john
@@ -339,10 +420,8 @@ dbshift -p -- history -e production
 
 # 配置管理
 dbshift -p -- config
-dbshift -p -- config -e production
 dbshift -p -- config-init
 dbshift -p -- config-set --host=localhost --user=root --password=123456
-dbshift -p -- config-set --host=prod-host -e production
 
 # 连接测试
 dbshift -p -- ping
@@ -350,131 +429,50 @@ dbshift -p -- ping -e production
 dbshift -p -- ping --host=localhost --user=root --password=123456
 ```
 
-## 测试和调试
+## 测试和部署
 
-### 测试框架
-- **单元测试**: Jest 框架，`test/` 目录
-- **模拟测试**: Database 类 Mock，避免真实数据库依赖
-- **集成测试**: 完整的命令执行流程测试
-
-### 调试工具
-- **历史记录测试**: `test-history-*.js` 脚本
-- **连接测试**: `test-connection-*.js` 脚本
-- **交互模式调试**: React DevTools（通过 Ink）
-
-### 错误处理
-- **统一异常**: 使用自定义 Error 类 (DatabaseError, ValidationError, etc.)
-- **错误恢复**: 交互模式下错误后自动恢复到命令提示符
-- **日志输出**: Chalk 彩色日志，区分信息、警告、错误
-
-## SQL 文件编写规范
-
-### 文件结构
-```sql
--- 迁移描述：创建用户表
--- 作者：Greddy
--- 日期：2025-07-11
-
--- 向前迁移
-CREATE TABLE users (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    username VARCHAR(50) NOT NULL UNIQUE,
-    email VARCHAR(100) NOT NULL UNIQUE,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- 创建索引
-CREATE INDEX idx_users_email ON users(email);
-CREATE INDEX idx_users_username ON users(username);
-
--- 插入初始数据（可选）
-INSERT INTO users (username, email) VALUES 
-('admin', 'admin@example.com'),
-('test', 'test@example.com');
+### 测试命令
+```bash
+npm test              # 运行 Jest 测试套件
+npm run test:watch    # 监视模式测试
+npm run test:coverage # 生成覆盖率报告
 ```
 
-### 编写注意事项
-1. 使用标准 SQL 语法，以分号 (`;`) 分隔语句
-2. 文件可在任何 SQL 编辑器中直接执行
-3. 支持单行注释 (`--`) 和多行注释 (`/* */`)
-4. 每个迁移文件应该是幂等的，可以安全重复执行
-5. 使用模板系统生成标准化的迁移文件
-
-## 环境配置
-
-### 开发环境
-```javascript
-// schema.config.js
-module.exports = {
-  development: {
-    host: 'localhost',
-    port: 3306,
-    user: 'root',
-    password: 'dev_password',
-    database: 'myapp_development'
-  }
-};
+### NPM 脚本
+```bash
+npm start           # 启动交互模式
+npm run cli         # 测试 CLI 模式
+npm run dev         # 开发模式
+npm run demo        # 演示命令
 ```
 
-### 生产环境
-```javascript
-// schema.config.js
-module.exports = {
-  production: {
-    host: process.env.MYSQL_HOST || 'localhost',
-    port: process.env.MYSQL_PORT || 3306,
-    user: process.env.MYSQL_USERNAME || 'root',
-    password: process.env.MYSQL_PASSWORD || 'password',
-    database: process.env.MYSQL_DATABASE || 'myapp_production'
-  }
-};
-```
-
-## 最佳实践
-
-### 团队协作
-1. **作者标识**: 每个开发者使用唯一的作者名
-2. **序号独立**: 利用作者分组序号机制避免冲突
-3. **分支策略**: 迁移文件随代码一起管理
-4. **环境隔离**: 使用不同环境进行开发和测试
-
-### 迁移设计
-1. **小步迁移**: 每个迁移文件只做一件事
-2. **向前兼容**: 考虑线上数据的影响
-3. **测试验证**: 在测试环境充分验证后部署
-4. **回滚计划**: 准备数据回滚方案（如需要）
-
-### 性能优化
-1. **批量操作**: 大数据量更新使用批量操作
-2. **索引策略**: 先删除索引，数据导入后重建
-3. **分批执行**: 超大表修改考虑分批执行
-4. **监控观察**: 执行过程中监控数据库性能
-
-## 扩展开发
-
-### 添加新命令
-1. 在 `lib/commands/` 创建命令处理器
-2. 在 `lib/ui/InteractiveApp.js` 添加交互模式支持
-3. 在 `lib/cli/CLIRunner.js` 添加 CLI 模式支持
-4. 更新命令列表和帮助信息
-
-### 自定义错误处理
-```javascript
-// lib/utils/errors.js
-class CustomError extends Error {
-  constructor(message, originalError) {
-    super(message);
-    this.name = 'CustomError';
-    this.originalError = originalError;
+### 部署配置
+```json
+{
+  "bin": {
+    "dbshift": "bin/dbshift.js"
+  },
+  "engines": {
+    "node": ">=14.0.0"
   }
 }
 ```
 
-### 扩展配置格式
-1. 在 `lib/core/config.js` 添加新格式支持
-2. 更新配置加载优先级
-3. 添加相应的验证逻辑
+## SQL 迁移文件编写
+
+### 标准模板结构
+- **元数据注释**: 描述、作者、日期、版本
+- **数据库创建**: CREATE DATABASE IF NOT EXISTS
+- **表结构定义**: CREATE TABLE、ALTER TABLE
+- **索引管理**: CREATE INDEX、DROP INDEX
+- **数据操作**: INSERT、UPDATE（谨慎使用）
+
+### 最佳实践
+1. **幂等性**: 使用 `IF NOT EXISTS`、`IF EXISTS` 语句
+2. **单一职责**: 每个文件只处理一个功能或表
+3. **向前兼容**: 避免破坏性更改
+4. **备份策略**: 重要数据变更前备份
 
 ---
 
-这份文档提供了 DBShift 项目的完整架构和开发指南。项目采用现代化的技术栈，提供了创新的双模式用户体验，同时保持了传统 CLI 工具的强大功能。
+这份重写的文档准确反映了当前代码架构，特别是 React + Ink 交互模式和 Commander.js CLI 模式的双模式设计。

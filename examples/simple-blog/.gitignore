@@ -1,0 +1,18 @@
+# 示例项目的 gitignore
+# 覆盖父级 .gitignore 中的一些规则
+
+# 允许示例配置文件（包含示例数据，非敏感信息）
+!schema.config.js
+
+# 但仍然忽略真实的环境配置
+.env
+.env.local
+.env.production
+
+# 忽略用户可能创建的实际配置
+schema.config.local.js
+schema.config.production.js
+
+# 数据库相关
+*.sql.backup
+*.dump

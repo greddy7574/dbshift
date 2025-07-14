@@ -1,6 +1,6 @@
 {
   "name": "dbshift",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "A simple and powerful MySQL database migration tool inspired by Flyway",
   "main": "bin/dbshift.js",
   "bin": {
